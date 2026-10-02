@@ -4,6 +4,7 @@ import {
   DollarOutlined,
   HistoryOutlined,
   HomeOutlined,
+  MenuOutlined,
   OrderedListOutlined,
   ScanOutlined,
   SettingOutlined,
@@ -12,6 +13,8 @@ import {
   UserOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
+import { Drawer } from 'antd';
+import { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from './session';
 import { ZuzuWordmark } from './components/common';
@@ -46,11 +49,40 @@ const staffDesktop = [
 const roleLabels: Record<string, string> = { OWNER: 'Chủ cửa hàng', MANAGER: 'Quản lý', STAFF: 'Nhân viên' };
 const initials = (name = '') => name.trim().split(/\s+/).filter(Boolean).slice(-2).map((word) => word[0]!.toUpperCase()).join('');
 
+function NavigationGroups({
+  groups,
+  selected,
+  onNavigate,
+}: {
+  groups: Array<{ label?: string; items: typeof operations }>;
+  selected?: string;
+  onNavigate?: () => void;
+}) {
+  return <nav aria-label="Điều hướng chính">
+    {groups.map((group, index) => <div key={group.label ?? index} className="nav-group">
+      {group.label && <div className="nav-group-label">{group.label}</div>}
+      {group.items.map((item) => (
+        <Link
+          key={item.key}
+          to={item.key}
+          className={`nav-item ${selected === item.key ? 'active' : ''}`}
+          aria-current={selected === item.key ? 'page' : undefined}
+          onClick={onNavigate}
+        >
+          {item.icon}
+          {item.text}
+        </Link>
+      ))}
+    </div>)}
+  </nav>;
+}
+
 export function App() {
   const location = useLocation();
   const session = useSession();
   const role = session.data?.role;
   const isStaff = role === 'STAFF';
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const desktopGroups: Array<{ label?: string; items: typeof operations }> = isStaff
     ? [{ items: staffDesktop }]
     : [
@@ -70,22 +102,7 @@ export function App() {
       <Link to={isStaff ? '/' : '/dashboard'} className="side-brand" aria-label="ZUZU — về trang chính">
         <ZuzuWordmark light/>
       </Link>
-      <nav aria-label="Điều hướng chính">
-        {desktopGroups.map((group, index) => <div key={group.label ?? index} className="nav-group">
-          {group.label && <div className="nav-group-label">{group.label}</div>}
-          {group.items.map((item) => (
-            <Link
-              key={item.key}
-              to={item.key}
-              className={`nav-item ${selected === item.key ? 'active' : ''}`}
-              aria-current={selected === item.key ? 'page' : undefined}
-            >
-              {item.icon}
-              {item.text}
-            </Link>
-          ))}
-        </div>)}
-      </nav>
+      <NavigationGroups groups={desktopGroups} selected={selected}/>
       <Link to="/profile" className="side-user">
         <span className="avatar" aria-hidden="true">{initials(session.data?.name)}</span>
         <span>
@@ -96,16 +113,40 @@ export function App() {
     </aside>
     <div className="shell-main">
       <header className="topbar">
-        <Link to="/" aria-label="ZUZU — về trang chính"><ZuzuWordmark/></Link>
+        {!isStaff && <button
+          className="topbar-menu"
+          type="button"
+          aria-label="Mở điều hướng"
+          aria-expanded={navigationOpen}
+          onClick={() => setNavigationOpen(true)}
+        ><MenuOutlined/></button>}
+        <Link to={isStaff ? '/' : '/dashboard'} aria-label="ZUZU — về trang chính"><ZuzuWordmark/></Link>
         <Link to="/profile" className="topbar-user" aria-label="Tài khoản">
           <span className="avatar" aria-hidden="true">{initials(session.data?.name)}</span>
           <b>{session.data?.name}</b>
         </Link>
       </header>
-      <main id="main-content" className={`content ${isStaff ? 'staff-content' : 'management-content'}`}>
+      {!isStaff && <Drawer
+        className="nav-drawer"
+        title={<ZuzuWordmark/>}
+        placement="left"
+        open={navigationOpen}
+        onClose={() => setNavigationOpen(false)}
+      >
+        <NavigationGroups
+          groups={desktopGroups}
+          selected={selected}
+          onNavigate={() => setNavigationOpen(false)}
+        />
+        <Link to="/profile" className="drawer-user" onClick={() => setNavigationOpen(false)}>
+          <span className="avatar" aria-hidden="true">{initials(session.data?.name)}</span>
+          <span><b>{session.data?.name}</b><small>{role ? roleLabels[role] : ''}</small></span>
+        </Link>
+      </Drawer>}
+      <main id="main-content" className={`content ${isStaff ? 'staff-content' : 'management-content'} ${location.pathname === '/' ? 'home-content' : ''}`}>
         <Outlet/>
       </main>
-      <nav className="bottom-nav" aria-label="Điều hướng chính">
+      <nav className={`bottom-nav ${!isStaff ? 'manager-bottom-nav' : ''}`} aria-label="Điều hướng chính">
         {mobileItems.map((item) => (
           <Link
             key={item.key}

@@ -21,7 +21,7 @@ export function LoginPage() {
       }),
     onSuccess: (user) => {
       queryClient.setQueryData(["session"], user);
-      navigate("/");
+      navigate(user.role === "STAFF" ? "/" : "/dashboard");
     },
   });
 
@@ -36,10 +36,7 @@ export function LoginPage() {
               <br />
               chốt ca chắc.
             </h2>
-            <p>
-              Hệ thống vận hành cho tiệm giặt là — từ nhận đồ, cân kg, quét QR
-              đến chốt ca mỗi ngày.
-            </p>
+            <p>Mọi thao tác trong ca, gọn trong một hệ thống.</p>
           </div>
         </div>
       </div>
@@ -78,6 +75,7 @@ export function LoginPage() {
                 autoFocus
                 autoComplete="username"
                 size="large"
+                placeholder="Ví dụ: staff hoặc 0912 345 678"
                 prefix={<UserOutlined />}
               />
             </Form.Item>

@@ -6,7 +6,7 @@ import {
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { Spin } from "antd";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Order } from "../api/types";
 import { EmptyState, OrderCard } from "../components/common";
@@ -34,8 +34,12 @@ export function HomePage() {
   });
   const who = session.data?.name;
 
+  if (session.data && session.data.role !== "STAFF") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
-    <>
+    <div className="home-page">
       <div className="home-greet">
         <p className="home-date">
           {new Date().toLocaleDateString("vi-VN", {
@@ -50,6 +54,8 @@ export function HomePage() {
         </h1>
       </div>
 
+      <div className="home-workspace">
+      <div className="home-primary">
       <div className="home-hero">
         <Link to="/receive" className="op-action op-receive">
           <span className="op-icon" aria-hidden="true">
@@ -94,34 +100,38 @@ export function HomePage() {
         <span className="dot-sep" aria-hidden="true">
           ·
         </span>
-        <Link to="/orders" className="ok">
+        <Link to="/orders" className="attention">
           <strong>{summary.data?.attention ?? 0}</strong> cần xử lý
         </Link>
       </div>
-
-      <div className="home-recent-head">
-        <h2>Đơn gần đây</h2>
-        <Link to="/orders">Xem tất cả</Link>
       </div>
-      {recent.isLoading ? (
-        <div className="center">
-          <Spin />
-        </div>
-      ) : recent.error ? (
-        <EmptyState description={recent.error.message} />
-      ) : recent.data?.length ? (
-        <div className="order-list">
-          {recent.data.slice(0, 4).map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </div>
-      ) : (
-        <EmptyState description="Chưa có đơn nào trong ngày" />
-      )}
 
-      <Link to="/expenses/new" className="home-utility">
-        <DollarOutlined /> Chi tiền
-      </Link>
-    </>
+      <section className="home-recent" aria-labelledby="recent-orders-title">
+        <div className="home-recent-head">
+          <h2 id="recent-orders-title">Đơn gần đây</h2>
+          <Link to="/orders">Xem tất cả</Link>
+        </div>
+        {recent.isLoading ? (
+          <div className="center">
+            <Spin />
+          </div>
+        ) : recent.error ? (
+          <EmptyState description={recent.error.message} />
+        ) : recent.data?.length ? (
+          <div className="order-list">
+            {recent.data.slice(0, 4).map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState description="Chưa có đơn nào trong ngày" />
+        )}
+
+        <Link to="/expenses/new" className="home-utility">
+          <DollarOutlined /> Chi tiền
+        </Link>
+      </section>
+      </div>
+    </div>
   );
 }

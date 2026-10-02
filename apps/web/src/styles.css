@@ -105,6 +105,14 @@ h1, h2, h3 { letter-spacing: -.01em; }
 }
 .topbar-user:hover { background: var(--page-deep); }
 .topbar-user b { font-size: 14px; font-weight: 600; }
+.topbar-menu {
+  display: grid; place-items: center; flex: none;
+  width: 44px; height: 44px; padding: 0;
+  border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: var(--ink); font-size: 20px;
+  cursor: pointer; touch-action: manipulation;
+}
+.topbar-menu:active { background: var(--page-deep); }
 .avatar {
   display: inline-grid; place-items: center; flex: none;
   width: 36px; height: 36px; border-radius: 12px;
@@ -145,6 +153,28 @@ h1, h2, h3 { letter-spacing: -.01em; }
 
 /* desktop side nav */
 .side-nav { display: none; }
+.manager-bottom-nav { display: none; }
+
+.nav-drawer .ant-drawer-body { display: flex; flex-direction: column; padding: 8px 14px 18px; }
+.nav-drawer nav { display: grid; gap: 2px; }
+.nav-drawer .nav-group-label {
+  margin: 18px 12px 7px; font-size: 11px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3);
+}
+.nav-drawer .nav-item {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 48px; padding: 0 14px; border-radius: var(--radius-sm);
+  color: var(--ink-2); text-decoration: none; font-size: 15px; font-weight: 550;
+}
+.nav-drawer .nav-item.active { background: var(--brand-soft); color: var(--brand-ink); font-weight: 700; }
+.nav-drawer .nav-item .anticon { color: var(--brand-deep); font-size: 17px; }
+.drawer-user {
+  display: flex; align-items: center; gap: 11px; margin-top: auto;
+  padding: 16px 10px 4px; border-top: 1px solid var(--line-soft); text-decoration: none;
+}
+.drawer-user b, .drawer-user small { display: block; }
+.drawer-user b { font-size: 14px; }
+.drawer-user small { color: var(--ink-2); font-size: 12px; }
 
 /* ---------- page header ---------- */
 
@@ -191,6 +221,7 @@ h1, h2, h3 { letter-spacing: -.01em; }
 
 /* ---------- home ---------- */
 
+.home-page { width: 100%; }
 .home-greet { padding: 6px 2px 0; }
 .home-date { margin: 0 0 2px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
 .home-hello { margin: 0; font-size: 27px; font-weight: 750; letter-spacing: -.015em; }
@@ -228,8 +259,7 @@ h1, h2, h3 { letter-spacing: -.01em; }
 }
 .home-status a { display: inline-flex; align-items: baseline; gap: 7px; text-decoration: none; color: inherit; padding: 4px 2px; border-radius: 8px; }
 .home-status strong { font-family: var(--font-mono); font-size: 19px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.home-status .warn strong { color: var(--warning); }
-.home-status .ok strong { color: var(--success); }
+.home-status .warn strong, .home-status .attention strong { color: var(--warning); }
 .home-status .dot-sep { color: var(--line); }
 
 .home-recent-head { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 2px 12px; }
@@ -258,8 +288,8 @@ h1, h2, h3 { letter-spacing: -.01em; }
 .login-tagline h2 { margin: 0 0 10px; color: #FFFDF6; font-size: 26px; font-weight: 750; letter-spacing: -.015em; line-height: 1.3; }
 .login-tagline p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--panel-text); }
 .login-main {
-  display: flex; flex-direction: column; justify-content: center;
-  padding: 32px 22px calc(32px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; justify-content: flex-start;
+  padding: max(72px, env(safe-area-inset-top)) 22px calc(32px + env(safe-area-inset-bottom));
 }
 .login-head { margin-bottom: 26px; }
 .login-head h1 { margin: 18px 0 4px; font-size: 24px; font-weight: 750; letter-spacing: -.01em; }
@@ -568,16 +598,31 @@ h1, h2, h3 { letter-spacing: -.01em; }
   .side-user small { display: block; color: #7FA093; font-size: 12px; }
 
   .staff-content { max-width: 780px; }
+  .staff-content.home-content { max-width: 1160px; }
   .management-content { max-width: 1440px; min-width: 0; }
 
   .page-header h1 { font-size: 29px; }
 
-  .home-hero { gap: 12px; margin: 24px 0 20px; }
-  .op-action.op-receive { min-height: 92px; padding: 18px 22px; }
-  .op-action.op-receive .op-copy b { font-size: 24px; }
-  .op-action.op-receive .op-icon { width: 52px; height: 52px; border-radius: 17px; font-size: 27px; }
-  .op-action.op-scan { min-height: 72px; }
+  .home-page { padding-top: 10px; }
+  .home-greet { max-width: 700px; }
+  .home-workspace {
+    display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+    align-items: start; gap: 28px; margin-top: 26px;
+  }
+  .home-hero { gap: 12px; margin: 0; }
+  .op-action.op-receive { min-height: 122px; padding: 24px; }
+  .op-action.op-receive .op-copy b { font-size: 25px; }
+  .op-action.op-receive .op-icon { width: 56px; height: 56px; border-radius: 18px; font-size: 28px; }
+  .op-action.op-scan { min-height: 78px; }
   .op-action.op-scan .op-copy b { font-size: 18px; }
+  .home-status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 20px 0 0; margin: 8px 0 0; }
+  .home-status a { display: grid; gap: 3px; padding: 10px 16px; border-left: 1px solid var(--line); }
+  .home-status a:first-child { padding-left: 2px; border-left: 0; }
+  .home-status strong { font-size: 23px; }
+  .home-status .dot-sep { display: none; }
+  .home-recent-head { margin-top: 2px; }
+  .home-recent .center { min-height: 260px; }
+  .home-utility { margin-top: 22px; }
 
   .scanner-page { margin: 0; min-height: 0; }
   .scanner-viewport {
@@ -592,12 +637,13 @@ h1, h2, h3 { letter-spacing: -.01em; }
   .dashboard-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .login { grid-template-columns: 1.05fr 1fr; }
   .login-brand { display: block; }
-  .login-main { padding: 48px 56px; }
+  .login-main { justify-content: center; padding: 48px 56px; }
   .order-card { padding: 16px 18px; }
   .order-card:hover { box-shadow: var(--shadow-2); }
 }
 
 @media (min-width: 1280px) {
+  .home-workspace { grid-template-columns: minmax(400px, .86fr) minmax(460px, 1.14fr); gap: 56px; }
   .filter-bar { grid-template-columns: minmax(300px, 1fr) 220px 300px; }
   .filter-bar > .ant-picker { grid-column: auto; }
 }
