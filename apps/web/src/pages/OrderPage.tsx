@@ -16,6 +16,10 @@ import { useSession } from "../session";
 
 const maskPhone = (phone?: string) =>
   phone ? `${phone.slice(0, 4)} *** ${phone.slice(-3)}` : "—";
+const paymentLabels: Record<string, string> = {
+  CASH: "Tiền mặt",
+  BANK_TRANSFER: "Chuyển khoản",
+};
 export function OrderPage() {
   const { message } = AntApp.useApp();
   const { id = "" } = useParams();
@@ -69,7 +73,18 @@ export function OrderPage() {
       </div>
     );
   if (!order.data)
-    return <EmptyState description={order.error?.message ?? "Không tìm thấy đơn"} />;
+    return (
+      <EmptyState
+        description={order.error?.message ?? "Không tìm thấy đơn"}
+        action={
+          <Link to="/scan">
+            <Button type="primary" size="large">
+              QUÉT LẠI / NHẬP MÃ
+            </Button>
+          </Link>
+        }
+      />
+    );
   const data = order.data;
   const item = data.items[0];
   const needsCustomer = data.status === "READY_FOR_PICKUP" && !data.customer;
@@ -111,7 +126,7 @@ export function OrderPage() {
 
       <section className="order-hero">
         <div className="oh-top">
-          <span className="oh-code">{data.code}</span>
+          <h1 className="oh-code">{data.code}</h1>
           <StatusBadge status={data.status} />
         </div>
         {data.customer ? (
@@ -156,6 +171,16 @@ export function OrderPage() {
           <div className="detail-row loyalty-row">
             <span>Điểm sau khi trả đồ</span>
             <strong>+{data.pointsToEarn ?? 0} điểm</strong>
+          </div>
+        )}
+        {data.payments[0] && (
+          <div className="detail-row">
+            <span>Đã thanh toán</span>
+            <strong>
+              {paymentLabels[data.payments[0].method] ??
+                data.payments[0].method}{" "}
+              · <Money value={data.payments[0].amount} />
+            </strong>
           </div>
         )}
       </section>

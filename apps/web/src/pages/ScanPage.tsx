@@ -14,6 +14,7 @@ export function ScanPage() {
 
   return (
     <div className="scanner-page">
+      <h1 className="sr-only">Quét QR tra đơn</h1>
       <QrScanner onScan={open} />
       <section className="scanner-foot" aria-label="Tìm đơn bằng mã">
         <div className="divider">Hoặc nhập mã đơn</div>

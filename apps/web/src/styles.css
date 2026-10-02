@@ -92,6 +92,22 @@ h3 {
   color: var(--ink);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.receive-success {
+  margin: 14px 0 0;
+}
+
 /* ---------- wordmark ---------- */
 
 .wordmark {
@@ -234,7 +250,7 @@ h3 {
   right: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -412,6 +428,7 @@ h3 {
 
 .order-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .order-card {
@@ -720,6 +737,7 @@ h3 {
 
 .task-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .task-form .ant-form-item {
@@ -985,7 +1003,7 @@ h3 {
 }
 .total-preview {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 3px 12px;
   padding: 18px;
@@ -1269,6 +1287,7 @@ h3 {
   line-height: 1.15;
   font-weight: 750;
   letter-spacing: 0.01em;
+  margin: 0;
 }
 .oh-customer {
   display: grid;

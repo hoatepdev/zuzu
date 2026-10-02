@@ -5,15 +5,18 @@ import { useEffect, useRef, useState } from "react";
 export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const scanner = useRef<QrScannerLibrary | null>(null);
+  const handled = useRef(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!video.current) return;
     let disposed = false;
+    handled.current = false;
     const instance = new QrScannerLibrary(
       video.current,
       (result) => {
-        if (disposed) return;
+        if (disposed || handled.current) return;
+        handled.current = true;
         navigator.vibrate?.(80);
         instance.stop();
         onScan(result.data);
@@ -39,6 +42,7 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
 
   const retry = () => {
     setError("");
+    handled.current = false;
     void scanner.current
       ?.start()
       .catch(() =>

@@ -1,14 +1,16 @@
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Checkbox, Form, Input } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { User } from "../api/types";
 import { ZuzuWordmark } from "../components/common";
+import { useSession } from "../session";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const session = useSession();
   const login = useMutation({
     mutationFn: (values: {
       usernameOrPhone: string;
@@ -24,6 +26,13 @@ export function LoginPage() {
       navigate(user.role === "STAFF" ? "/" : "/dashboard");
     },
   });
+  if (session.data)
+    return (
+      <Navigate
+        to={session.data.role === "STAFF" ? "/" : "/dashboard"}
+        replace
+      />
+    );
 
   return (
     <main className="login">

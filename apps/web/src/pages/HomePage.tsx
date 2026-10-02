@@ -1,12 +1,14 @@
 import {
   CameraOutlined,
+  CheckCircleOutlined,
   DollarOutlined,
   PlusOutlined,
   RightOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { Spin } from "antd";
-import { Link, Navigate } from "react-router-dom";
+import { Alert, Spin } from "antd";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Order } from "../api/types";
 import { EmptyState, OrderCard } from "../components/common";
@@ -21,6 +23,14 @@ const greeting = () => {
 
 export function HomePage() {
   const session = useSession();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [receivedCode, setReceivedCode] = useState(
+    (location.state as { receivedCode?: string } | null)?.receivedCode,
+  );
+  useEffect(() => {
+    if (receivedCode) navigate("/", { replace: true });
+  }, [receivedCode, navigate]);
   const summary = useQuery({
     queryKey: ["orders", "summary"],
     queryFn: () =>
@@ -53,6 +63,24 @@ export function HomePage() {
           {who ? `, ${who}` : ""}
         </h1>
       </div>
+
+      {receivedCode && (
+        <Alert
+          className="receive-success"
+          role="status"
+          type="success"
+          showIcon
+          icon={<CheckCircleOutlined />}
+          closable
+          onClose={() => setReceivedCode(undefined)}
+          message={
+            <>
+              Đã tạo đơn <strong>{receivedCode}</strong> — bill đang in, dán QR
+              lên túi đồ.
+            </>
+          }
+        />
+      )}
 
       <div className="home-workspace">
       <div className="home-primary">

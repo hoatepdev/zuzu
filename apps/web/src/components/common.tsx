@@ -163,7 +163,13 @@ export function OrderCard({ order }: { order: Order }) {
   );
 }
 
-export function EmptyState({ description }: { description: string }) {
+export function EmptyState({
+  description,
+  action,
+}: {
+  description: string;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="empty-state">
       <span className="empty-bubbles" aria-hidden="true">
@@ -172,6 +178,7 @@ export function EmptyState({ description }: { description: string }) {
         <i />
       </span>
       <p>{description}</p>
+      {action}
     </div>
   );
 }

@@ -136,10 +136,10 @@ export function CompletePage() {
           >
             <InputNumber
               className="quantity-input"
-              autoFocus
               inputMode="decimal"
               size="large"
               min={0.01}
+              max={10000}
               step={selected?.unit === "KG" ? 0.1 : 1}
               disabled={complete.isPending}
               addonAfter={unitLabel}
