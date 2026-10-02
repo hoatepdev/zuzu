@@ -30,9 +30,13 @@ npm test
 npm run build
 ```
 
+## In bill thật (ZY908 K80)
+
+- Dev mặc định dùng `MockPrintProvider` (bill ghi vào API log).
+- Tại shop: chạy [apps/print-agent](apps/print-agent/README.md) trên máy cắm máy in, rồi đặt `PRINT_PROVIDER=http` trong `apps/api/.env`. API gọi agent qua HTTP, agent xuất ESC/POS trực tiếp ra máy in — lỗi in không bao giờ làm mất đơn, staff in lại được từ UI.
+
 ## Assumptions Phase 1
 
-- Print dùng `MockPrintProvider`: bill K80 được ghi vào API log, QR payload chỉ là order code.
 - Zalo dùng `MockNotificationProvider`; provider thật sẽ thay qua DI mà không đổi order flow.
 - Không có trạng thái washing/drying/folding; bill giấy quản lý luồng vật lý.
 - Receipt hiện lưu URL, chưa upload file trực tiếp.

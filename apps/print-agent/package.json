@@ -1,0 +1,18 @@
+{
+  "name": "@zuzu/print-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test",
+    "typecheck": "node --check src/index.js && node --check src/escpos.js && node --check src/transports.js",
+    "build": "node --check src/index.js && node --check src/escpos.js && node --check src/transports.js"
+  },
+  "optionalDependencies": {
+    "usb": "^2.18.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
