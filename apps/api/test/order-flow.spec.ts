@@ -1,14 +1,15 @@
-import { OrderStatus, PaymentMethod, PrismaClient, Role, ServiceUnit } from '@prisma/client';
+import { OrderStatus, PaymentMethod, PrismaClient, PrintJobStatus, Role, ServiceUnit } from '@prisma/client';
 import { NotificationsService } from '../src/notifications/notifications.service';
 import { OrdersService } from '../src/orders/orders.service';
+import { PrintingService } from '../src/printing/printing.service';
 import { SettingsService } from '../src/settings/settings.service';
 import { PrismaService } from '../src/prisma.service';
 
 const prisma = new PrismaClient();
 const prismaService = prisma as unknown as PrismaService;
-const printing = { print: jest.fn().mockResolvedValue(undefined) };
+const printing = new PrintingService(prismaService);
 const notifications = { orderReady: jest.fn().mockResolvedValue(undefined) };
-const orders = new OrdersService(prismaService, printing as never, notifications as unknown as NotificationsService, new SettingsService(prismaService));
+const orders = new OrdersService(prismaService, printing, notifications as unknown as NotificationsService, new SettingsService(prismaService));
 const suffix = Date.now().toString();
 let userId: string;
 let serviceId: string;
@@ -24,6 +25,7 @@ afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { userId } });
   await prisma.payment.deleteMany({ where: { createdById: userId } });
   await prisma.loyaltyTransaction.deleteMany({ where: { customer: { phone: `09${suffix.slice(-8)}` } } });
+  await prisma.printJob.deleteMany({ where: { order: { createdById: userId } } });
   await prisma.orderItem.deleteMany({ where: { serviceId } });
   await prisma.order.deleteMany({ where: { createdById: userId } });
   await prisma.customer.deleteMany({ where: { phone: `09${suffix.slice(-8)}` } });
@@ -55,23 +57,24 @@ it('runs unknown customer through attach, complete, payment, loyalty and audit',
   await expect(orders.returnOrder(created.id, { method: PaymentMethod.CASH }, userId)).rejects.toThrow('Đơn chưa sẵn sàng để trả');
 });
 
-it('prints on create, prints again on reprint and audits ORDER_REPRINTED', async () => {
-  printing.print.mockClear();
+it('queues a receipt job on create and a fresh job on reprint, with audit', async () => {
   const created = await orders.create({ customerUnknown: true }, userId);
-  expect(created.printWarning).toBeUndefined();
-  expect(printing.print).toHaveBeenCalledWith(expect.objectContaining({ code: created.code }));
-  expect(printing.print).toHaveBeenCalledTimes(1);
+  const initial = await prisma.printJob.findFirstOrThrow({ where: { orderId: created.id } });
+  expect(initial.status).toBe(PrintJobStatus.PENDING);
+  expect(initial.type).toBe('ORDER_RECEIPT');
+  expect(initial.payload).toMatchObject({ code: created.code });
 
-  printing.print.mockClear();
   await orders.reprint(created.id, userId);
-  expect(printing.print).toHaveBeenCalledWith(expect.objectContaining({ code: created.code }));
+  const jobs = await prisma.printJob.findMany({ where: { orderId: created.id } });
+  expect(jobs).toHaveLength(2);
+  expect(jobs.some((job) => job.id === initial.id)).toBe(true);
   expect(await prisma.auditLog.count({ where: { entityId: created.id, action: 'ORDER_REPRINTED' } })).toBe(1);
 });
 
-it('keeps the order and warns when printing fails', async () => {
-  printing.print.mockRejectedValueOnce(new Error('Khong ket noi duoc ZUZU Print Agent'));
+it('keeps the order and its queued job even with no print agent online', async () => {
   const created = await orders.create({ customerUnknown: true }, userId);
   expect(created.code).toMatch(/^ZU-\d+$/);
-  expect(created.printWarning).toBe('Khong ket noi duoc ZUZU Print Agent');
+  const job = await prisma.printJob.findFirstOrThrow({ where: { orderId: created.id } });
+  expect(job.status).toBe(PrintJobStatus.PENDING);
   expect(await prisma.order.findUnique({ where: { id: created.id } })).not.toBeNull();
 });

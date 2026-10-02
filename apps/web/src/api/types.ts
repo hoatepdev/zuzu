@@ -144,6 +144,14 @@ export type Order = {
   }>;
   payments: Array<{ id: string; method: string; amount: string }>;
   notifications: Array<{ id: string; status: string; error?: string }>;
-  printWarning?: string;
+  printJobs: Array<{
+    id: string;
+    status: "PENDING" | "PRINTING" | "PRINTED" | "FAILED";
+    attempts: number;
+    lastError?: string;
+    createdAt: string;
+    printedAt?: string;
+    failedAt?: string;
+  }>;
   pointsToEarn?: number;
 };

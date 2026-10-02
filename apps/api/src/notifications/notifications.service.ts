@@ -8,7 +8,7 @@ export const NOTIFICATION_PROVIDER = Symbol('NOTIFICATION_PROVIDER');
 @Injectable()
 export class MockNotificationProvider implements NotificationProvider {
   private readonly logger = new Logger(MockNotificationProvider.name);
-  async send(phone: string, message: string) { this.logger.log(JSON.stringify({ channel: 'ZALO_MOCK', phone, message })); }
+  async send(phone: string, message: string) { this.logger.log(JSON.stringify({ channel: 'ZALO_MOCK', phone: `${phone.slice(0, 3)}***${phone.slice(-3)}`, message })); }
 }
 
 @Injectable()

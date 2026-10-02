@@ -37,6 +37,17 @@ enum NotificationStatus {
   SKIPPED
 }
 
+enum PrintJobStatus {
+  PENDING
+  PRINTING
+  PRINTED
+  FAILED
+}
+
+enum PrintJobType {
+  ORDER_RECEIPT
+}
+
 model User {
   id              String     @id @default(cuid())
   username        String     @unique
@@ -102,6 +113,7 @@ model Order {
   payments        Payment[]
   loyalty         LoyaltyTransaction[]
   notifications   Notification[]
+  printJobs       PrintJob[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -175,6 +187,26 @@ model Notification {
   createdAt DateTime           @default(now())
 
   @@index([status])
+}
+
+model PrintJob {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id])
+  type        PrintJobType   @default(ORDER_RECEIPT)
+  payload     Json
+  status      PrintJobStatus @default(PENDING)
+  attempts    Int            @default(0)
+  availableAt DateTime       @default(now())
+  claimedAt   DateTime?
+  claimToken  String?        @unique
+  printedAt   DateTime?
+  failedAt    DateTime?
+  lastError   String?
+  createdAt   DateTime       @default(now())
+
+  @@index([status, availableAt, createdAt])
+  @@index([orderId, createdAt])
 }
 
 model Expense {

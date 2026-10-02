@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAgentServer } from '../src/index.js';
+import { createAgentServer, createApiClient, runWorker } from '../src/index.js';
 import { consoleTransport, createTransport, tcpTransport } from '../src/transports.js';
 
 const okTransport = { health: async () => true, write: async () => {} };
@@ -122,4 +122,65 @@ test('usb transport reports disconnected when the device is absent', async () =>
   const transport = createTransport({ PRINTER_CONNECTION: 'usb', PRINTER_VENDOR_ID: '0xffff', PRINTER_PRODUCT_ID: '0xffff' });
   assert.equal(await transport.health(), false);
   await assert.rejects(transport.write(Buffer.from('x')), /Không kết nối được máy in ZY908|Cấu hình thiếu/);
+});
+
+test('API client sends bearer auth and claim token', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(url.endsWith('/next') ? JSON.stringify(null) : JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const api = createApiClient({ apiUrl: 'https://api.example.com/', token: 'secret', fetchImpl });
+  await api.next();
+  await api.success({ id: 'job-1', claimToken: 'claim-1' });
+  assert.equal(calls[0].init.headers.authorization, 'Bearer secret');
+  assert.equal(calls[0].url, 'https://api.example.com/print-jobs/next');
+  assert.deepEqual(JSON.parse(calls[1].init.body), { claimToken: 'claim-1' });
+});
+
+test('worker prints and acknowledges a claimed job', async () => {
+  const controller = new AbortController();
+  let writes = 0;
+  let successes = 0;
+  const job = { id: 'job-1', orderId: 'order-1', claimToken: 'claim-1', payload: { code: 'ZU-1001' } };
+  const api = {
+    next: async () => job,
+    success: async () => { successes += 1; controller.abort(); },
+    failure: async () => assert.fail('must not report failure')
+  };
+  await runWorker({ transport: { write: async () => { writes += 1; } }, api, signal: controller.signal, sleepImpl: async () => {} });
+  assert.equal(writes, 1);
+  assert.equal(successes, 1);
+});
+
+test('worker reports printer failures without stopping permanently', async () => {
+  const controller = new AbortController();
+  let failure;
+  const job = { id: 'job-2', orderId: 'order-2', claimToken: 'claim-2', payload: { code: 'ZU-1002' } };
+  const api = {
+    next: async () => job,
+    success: async () => assert.fail('must not report success'),
+    failure: async (_job, error) => { failure = error; controller.abort(); }
+  };
+  await runWorker({ transport: { write: async () => { throw new Error('Máy in đang ngoại tuyến'); } }, api, signal: controller.signal, sleepImpl: async () => {} });
+  assert.equal(failure, 'Máy in đang ngoại tuyến');
+});
+
+test('worker retries a success acknowledgement without printing twice', async () => {
+  const controller = new AbortController();
+  let writes = 0;
+  let acknowledgements = 0;
+  const job = { id: 'job-3', orderId: 'order-3', claimToken: 'claim-3', payload: { code: 'ZU-1003' } };
+  const api = {
+    next: async () => job,
+    failure: async () => assert.fail('must not report failure'),
+    success: async () => {
+      acknowledgements += 1;
+      if (acknowledgements === 1) throw new Error('temporary outage');
+      controller.abort();
+    }
+  };
+  await runWorker({ transport: { write: async () => { writes += 1; } }, api, signal: controller.signal, sleepImpl: async () => {} });
+  assert.equal(writes, 1);
+  assert.equal(acknowledgements, 2);
 });

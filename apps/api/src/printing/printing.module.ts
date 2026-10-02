@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { MockPrintProvider, PRINT_PROVIDER, PrintingService } from './printing.service';
-import { HttpPrintProvider } from './http-print.provider';
-
-// PRINT_PROVIDER=mock (default) | http — shop machines set PRINT_PROVIDER=http
-const provider = process.env.PRINT_PROVIDER === 'http' ? HttpPrintProvider : MockPrintProvider;
+import { PrintAgentGuard } from './print-agent.guard';
+import { PrintingController } from './printing.controller';
+import { PrintingService } from './printing.service';
 
 @Module({
-  providers: [PrintingService, { provide: PRINT_PROVIDER, useClass: provider }],
+  controllers: [PrintingController],
+  providers: [PrintingService, PrintAgentGuard],
   exports: [PrintingService]
 })
 export class PrintingModule {}

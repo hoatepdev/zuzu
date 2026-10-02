@@ -6,7 +6,9 @@
     "build": "nest build",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
+    "start:prod": "node dist/main.js",
     "db:migrate": "prisma migrate dev --name",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "postinstall": "prisma generate"
   },

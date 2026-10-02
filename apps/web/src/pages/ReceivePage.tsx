@@ -14,7 +14,6 @@ export function ReceivePage() {
   const [unknown, setUnknown] = useState(false);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("Không có");
-  const [printFailedOrder, setPrintFailedOrder] = useState<Order>();
   const deferredPhone = useDeferredValue(phone);
   const normalizedPhone = deferredPhone.replace(/\s/g, "");
   const customers = useQuery({
@@ -50,55 +49,9 @@ export function ReceivePage() {
       }),
     onSuccess: (order) => {
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
-      if (order.printWarning) setPrintFailedOrder(order);
-      else navigate("/", { state: { receivedCode: order.code } });
+      navigate("/", { state: { receivedCode: order.code } });
     },
   });
-  const reprint = useMutation({
-    mutationFn: () =>
-      api(`/orders/${printFailedOrder!.code}/reprint`, { method: "POST" }),
-    onSuccess: () => navigate("/"),
-  });
-
-  if (printFailedOrder)
-    return (
-      <div className="print-failure-page">
-        <PageHeader sub="Đơn đã được lưu an toàn">
-          Đã tạo {printFailedOrder.code}
-        </PageHeader>
-        <section className="print-failure-panel">
-          <Alert
-            type="error"
-            showIcon
-            message="Không thể kết nối máy in"
-            description={printFailedOrder.printWarning}
-          />
-          {reprint.error && (
-            <Alert type="error" message={reprint.error.message} showIcon />
-          )}
-          <div className="order-actions">
-            <Button
-              type="primary"
-              size="large"
-              block
-              loading={reprint.isPending}
-              disabled={reprint.isPending}
-              onClick={() => reprint.mutate()}
-            >
-              {reprint.isPending ? "ĐANG THỬ LẠI..." : "THỬ IN LẠI"}
-            </Button>
-            <Button
-              size="large"
-              block
-              disabled={reprint.isPending}
-              onClick={() => navigate("/")}
-            >
-              TIẾP TỤC KHÔNG IN
-            </Button>
-          </div>
-        </section>
-      </div>
-    );
 
   return (
     <div className="has-bottom-action">

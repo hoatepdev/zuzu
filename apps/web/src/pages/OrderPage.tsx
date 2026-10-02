@@ -35,7 +35,10 @@ export function OrderPage() {
   });
   const reprint = useMutation({
     mutationFn: () => api(`/orders/${id}/reprint`, { method: "POST" }),
-    onSuccess: () => message.success("Đã gửi lệnh in"),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["order", id] });
+      message.success("Đã xếp hàng in lại");
+    },
   });
   const returnOrder = useMutation({
     mutationFn: (method: string) =>
@@ -98,6 +101,15 @@ export function OrderPage() {
           : ""
       }
     >
+      {data.printJobs[0]?.status === "FAILED" && (
+        <Alert
+          className="customer-match"
+          type="error"
+          message="In bill thất bại sau 3 lần thử"
+          description={data.printJobs[0].lastError}
+          showIcon
+        />
+      )}
       {data.notifications[0]?.status === "ERROR" && (
         <Alert
           className="customer-match"

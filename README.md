@@ -1,6 +1,6 @@
 # ZUZU Laundry
 
-Phase 1 cho quy trình nhận đồ → cân/hoàn thành → thanh toán/trả đồ, cùng chi phí, dashboard, audit log và chốt ca.
+ZUZU hỗ trợ quy trình nhận đồ → cân/hoàn thành → thanh toán/trả đồ, quản lý vận hành và hàng đợi in bill bền vững cho Print Agent tại shop.
 
 ## Chạy local
 
@@ -32,8 +32,9 @@ npm run build
 
 ## In bill thật (ZY908 K80)
 
-- Dev mặc định dùng `MockPrintProvider` (bill ghi vào API log).
-- Tại shop: chạy [apps/print-agent](apps/print-agent/README.md) trên máy cắm máy in, rồi đặt `PRINT_PROVIDER=http` trong `apps/api/.env`. API gọi agent qua HTTP, agent xuất ESC/POS trực tiếp ra máy in — lỗi in không bao giờ làm mất đơn, staff in lại được từ UI.
+API lưu `PrintJob` cùng transaction tạo đơn. [Print Agent](apps/print-agent/README.md) tại shop chủ động poll API qua HTTPS rồi xuất ESC/POS; cloud không cần truy cập LAN và lỗi máy in không làm mất đơn.
+
+Triển khai, migration, backup và checklist production: [docs/production.md](docs/production.md).
 
 ## Assumptions Phase 1
 

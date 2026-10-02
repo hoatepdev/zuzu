@@ -4,11 +4,10 @@ import { buildReceipt } from './escpos.js';
 import { createTransport } from './transports.js';
 
 const MAX_BODY_BYTES = 8192;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const log = (fields) => console.log(JSON.stringify({ ts: new Date().toISOString(), ...fields }));
 
-const log = (order, result, error) =>
-  console.log(JSON.stringify({ ts: new Date().toISOString(), order, result, ...(error ? { error } : {}) }));
-
-function validate(payload) {
+export function validate(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return 'Dữ liệu không hợp lệ';
   if (typeof payload.code !== 'string' || !payload.code.trim() || payload.code.length > 64) return 'Thiếu hoặc sai mã đơn';
   if (payload.createdAt !== undefined && Number.isNaN(new Date(payload.createdAt).getTime())) return 'Ngày nhận không hợp lệ';
@@ -30,7 +29,7 @@ function readBody(req, limit) {
           rejected = true;
           reject(Object.assign(new Error('Yêu cầu quá lớn'), { statusCode: 413 }));
         }
-        return; // stop buffering; drain the rest so the 413 response can go out
+        return;
       }
       chunks.push(chunk);
     });
@@ -49,10 +48,7 @@ export function createAgentServer(transport, opts = {}) {
     };
 
     if (req.method === 'GET' && req.url === '/health') {
-      transport
-        .health()
-        .then((ok) => json(200, { ok, printer: ok ? 'connected' : 'disconnected' }))
-        .catch(() => json(200, { ok: false, printer: 'disconnected' }));
+      transport.health().then((ok) => json(200, { ok, printer: ok ? 'connected' : 'disconnected' })).catch(() => json(200, { ok: false, printer: 'disconnected' }));
       return;
     }
 
@@ -66,20 +62,16 @@ export function createAgentServer(transport, opts = {}) {
           return buildReceipt(body, { encoding });
         })
         .then((receipt) => {
-          // One physical print job at a time; retries always print again.
-          queue = queue
-            .then(() => transport.write(receipt.data, receipt.text))
-            .then(() => {
-              log(body.code, 'ok');
-              json(200, { ok: true });
-            })
-            .catch((error) => {
-              log(body.code, 'error', error.message);
-              json(500, { ok: false, message: error.message });
-            });
+          queue = queue.then(() => transport.write(receipt.data, receipt.text)).then(() => {
+            log({ order: body.code, result: 'ok' });
+            json(200, { ok: true });
+          }).catch((error) => {
+            log({ order: body.code, result: 'error', error: error.message });
+            json(500, { ok: false, message: error.message });
+          });
         })
         .catch((error) => {
-          if (body?.code) log(body.code, 'error', error.message);
+          if (body?.code) log({ order: body.code, result: 'error', error: error.message });
           json(error.statusCode ?? (error instanceof SyntaxError ? 400 : 500), { ok: false, message: error.message });
         });
       return;
@@ -89,14 +81,108 @@ export function createAgentServer(transport, opts = {}) {
   });
 }
 
+export function createApiClient({ apiUrl, token, fetchImpl = fetch }) {
+  const request = async (path, init = {}) => {
+    const response = await fetchImpl(`${apiUrl.replace(/\/$/, '')}${path}`, {
+      ...init,
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...init.headers },
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (!response.ok) throw Object.assign(new Error(`API ${response.status}`), { status: response.status });
+    const body = await response.text();
+    return body ? JSON.parse(body) : null;
+  };
+  return {
+    next: () => request('/print-jobs/next'),
+    success: (job) => request(`/print-jobs/${job.id}/success`, { method: 'POST', body: JSON.stringify({ claimToken: job.claimToken }) }),
+    failure: (job, error) => request(`/print-jobs/${job.id}/failure`, { method: 'POST', body: JSON.stringify({ claimToken: job.claimToken, error: String(error).slice(0, 500) }) })
+  };
+}
+
+export async function runWorker({ transport, api, encoding = 'utf8', pollMs = 2000, sleepImpl = sleep, signal } = {}) {
+  const message = (error) => (error instanceof Error ? error.message : String(error));
+  let backoffMs = pollMs;
+  while (!signal?.aborted) {
+    let job = null;
+    try {
+      job = await api.next();
+      backoffMs = pollMs;
+    } catch (error) {
+      log({ result: 'connection_error', error: message(error) });
+      await sleepImpl(backoffMs);
+      backoffMs = Math.min(backoffMs * 2, 30_000);
+      continue;
+    }
+
+    if (!job) {
+      await sleepImpl(pollMs);
+      continue;
+    }
+
+    const invalid = validate(job.payload);
+    let printError = invalid;
+    if (!printError) {
+      try {
+        const receipt = buildReceipt(job.payload, { encoding });
+        await transport.write(receipt.data, receipt.text);
+      } catch (error) {
+        printError = message(error);
+      }
+    }
+
+    if (printError) {
+      try {
+        await api.failure(job, printError);
+        log({ printJob: job.id, order: job.orderId, result: 'error', error: printError });
+      } catch (error) {
+        // Lease server-side sẽ hết hạn và job được thử lại; không được crash.
+        log({ printJob: job.id, result: 'failure_report_error', error: message(error) });
+        await sleepImpl(pollMs);
+      }
+      continue;
+    }
+
+    // Đã in giấy — báo success bền bỉ để không in trùng; bỏ qua khi job không còn của mình (409).
+    for (let ackBackoff = pollMs; !signal?.aborted; ) {
+      try {
+        await api.success(job);
+        log({ printJob: job.id, order: job.orderId, result: 'ok' });
+        break;
+      } catch (error) {
+        if (error?.status === 409) {
+          log({ printJob: job.id, result: 'ack_conflict' });
+          break;
+        }
+        log({ printJob: job.id, result: 'ack_error', error: message(error) });
+        await sleepImpl(ackBackoff);
+        ackBackoff = Math.min(ackBackoff * 2, 30_000);
+      }
+    }
+  }
+}
+
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
-  try {
-    process.loadEnvFile();
-  } catch {}
-  const port = Number(process.env.PORT ?? 3210);
-  const host = process.env.BIND_HOST ?? '127.0.0.1';
-  createAgentServer(createTransport()).listen(port, host, () => {
-    console.log(`[print-agent] listening on http://${host}:${port} (${process.env.PRINTER_CONNECTION ?? 'console'})`);
-  });
+  try { process.loadEnvFile(); } catch {}
+  const transport = createTransport();
+  transport.health().then((ok) => log({ result: 'startup', printer: ok ? 'connected' : 'disconnected' }));
+
+  if (process.env.NODE_ENV !== 'production') {
+    const port = Number(process.env.PORT ?? 3210);
+    const host = process.env.BIND_HOST ?? '127.0.0.1';
+    createAgentServer(transport).listen(port, host, () => console.log(`[print-agent] development server http://${host}:${port}`));
+  }
+
+  const apiUrl = process.env.ZUZU_API_URL;
+  const token = process.env.PRINT_AGENT_TOKEN;
+  if (!apiUrl || !token) {
+    if (process.env.NODE_ENV === 'production') throw new Error('ZUZU_API_URL và PRINT_AGENT_TOKEN là bắt buộc');
+  } else {
+    void runWorker({
+      transport,
+      api: createApiClient({ apiUrl, token }),
+      encoding: process.env.PRINTER_ENCODING ?? 'utf8',
+      pollMs: Number(process.env.POLL_INTERVAL_MS ?? 2000)
+    });
+  }
 }

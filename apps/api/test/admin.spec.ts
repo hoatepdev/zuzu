@@ -48,7 +48,7 @@ it('manages users without leaking hashes or locking the store out', async () => 
 });
 
 it('refreshes role and blocks inactive sessions on every request', async () => {
-  const jwt = new JwtService({ secret: process.env.JWT_SECRET ?? 'development-only-change-me' });
+  const jwt = new JwtService({ secret: process.env.SESSION_SECRET ?? 'development-only-change-me' });
   const guard = new AuthGuard(jwt, db);
   const run = () => {
     const request = { cookies: { zuzu_session: jwt.sign({ id: staffId, username: 'x', name: 'x', role: Role.MANAGER }) }, user: undefined };

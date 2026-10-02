@@ -5,7 +5,7 @@ import { AuthGuard } from './auth.guard';
 import { RolesGuard } from './roles.guard';
 
 @Module({
-  imports: [JwtModule.registerAsync({ useFactory: () => ({ secret: process.env.JWT_SECRET ?? 'development-only-change-me' }) })],
+  imports: [JwtModule.registerAsync({ useFactory: () => ({ secret: process.env.SESSION_SECRET ?? 'development-only-change-me' }) })],
   controllers: [AuthController],
   providers: [AuthGuard, RolesGuard],
   exports: [AuthGuard, RolesGuard, JwtModule]

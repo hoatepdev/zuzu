@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -7,31 +7,35 @@ import { SettingsService } from '../settings/settings.service';
 import { AttachCustomerDto, CompleteOrderDto, CreateOrderDto, ListOrdersDto, ListOrdersPageDto, ReturnOrderDto } from './orders.dto';
 import { calculateLineTotal, calculatePoints } from './money';
 
-const details = { customer: true, createdBy: { select: { id: true, name: true } }, returnedBy: { select: { id: true, name: true } }, items: true, payments: true, notifications: { orderBy: { createdAt: 'desc' as const } } };
+const details = { customer: true, createdBy: { select: { id: true, name: true } }, returnedBy: { select: { id: true, name: true } }, items: true, payments: true, notifications: { orderBy: { createdAt: 'desc' as const } }, printJobs: { select: { id: true, status: true, attempts: true, lastError: true, createdAt: true, printedAt: true, failedAt: true }, orderBy: { createdAt: 'desc' as const } } };
 const normalizePhone = (phone: string) => phone.replace(/\s/g, '');
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(private readonly prisma: PrismaService, private readonly printing: PrintingService, private readonly notifications: NotificationsService, private readonly settings: SettingsService) {}
 
   async create(dto: CreateOrderDto, userId: string) {
     if (!dto.customerUnknown && !dto.phone) throw new BadRequestException('Vui lòng nhập số điện thoại');
-    const order = await this.prisma.$transaction(async (tx) => {
-      const customer = dto.customerUnknown ? null : await tx.customer.upsert({
-        where: { phone: normalizePhone(dto.phone!) },
-        update: {},
-        create: { phone: normalizePhone(dto.phone!), name: dto.customerName }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const customer = dto.customerUnknown ? null : await tx.customer.upsert({
+          where: { phone: normalizePhone(dto.phone!) },
+          update: {},
+          create: { phone: normalizePhone(dto.phone!), name: dto.customerName }
+        });
+        const sequence = await tx.order.create({ data: { code: `PENDING-${crypto.randomUUID()}`, customerId: customer?.id, customerUnknown: dto.customerUnknown, note: dto.note, createdById: userId } });
+        const code = `ZU-${String(sequence.sequence).padStart(4, '0')}`;
+        const saved = await tx.order.update({ where: { id: sequence.id }, data: { code } });
+        await this.printing.enqueue(tx, saved.id, { code, createdAt: saved.createdAt.toISOString(), customerName: customer?.name ?? undefined, phone: customer?.phone, note: saved.note ?? undefined });
+        await tx.auditLog.create({ data: { userId, action: 'ORDER_CREATED', entityType: 'ORDER', entityId: saved.id, after: { code, status: saved.status, customerId: saved.customerId, customerUnknown: saved.customerUnknown } } });
+        return tx.order.findUniqueOrThrow({ where: { id: saved.id }, include: details });
       });
-      const sequence = await tx.order.create({ data: { code: `PENDING-${crypto.randomUUID()}`, customerId: customer?.id, customerUnknown: dto.customerUnknown, note: dto.note, createdById: userId } });
-      const code = `ZU-${String(sequence.sequence).padStart(4, '0')}`;
-      const saved = await tx.order.update({ where: { id: sequence.id }, data: { code }, include: details });
-      await tx.auditLog.create({ data: { userId, action: 'ORDER_CREATED', entityType: 'ORDER', entityId: saved.id, after: { code, status: saved.status, customerId: saved.customerId, customerUnknown: saved.customerUnknown } } });
-      return saved;
-    });
-    let printWarning: string | undefined;
-    try { await this.printing.print({ code: order.code, createdAt: order.createdAt, customerName: order.customer?.name ?? undefined, phone: order.customer?.phone, note: order.note ?? undefined }); }
-    catch (error) { printWarning = error instanceof Error ? error.message : 'Không thể in bill'; }
-    return { ...order, printWarning };
+    } catch (error) {
+      this.logger.error(`order_create_failed user=${userId} error=${error instanceof Error ? error.message : 'unknown'}`);
+      throw error;
+    }
   }
 
   list(query: ListOrdersDto) {
@@ -147,9 +151,12 @@ export class OrdersService {
 
   async reprint(idOrCode: string, userId: string) {
     const order = await this.get(idOrCode);
-    await this.printing.print({ code: order.code, createdAt: order.createdAt, customerName: order.customer?.name ?? undefined, phone: order.customer?.phone, note: order.note ?? undefined });
-    await this.prisma.auditLog.create({ data: { userId, action: 'ORDER_REPRINTED', entityType: 'ORDER', entityId: order.id, after: { code: order.code } } });
-    return { ok: true };
+    const job = await this.prisma.$transaction(async (tx) => {
+      const queued = await this.printing.enqueue(tx, order.id, { code: order.code, createdAt: order.createdAt.toISOString(), customerName: order.customer?.name ?? undefined, phone: order.customer?.phone, note: order.note ?? undefined });
+      await tx.auditLog.create({ data: { userId, action: 'ORDER_REPRINTED', entityType: 'ORDER', entityId: order.id, after: { code: order.code, printJobId: queued.id } } });
+      return queued;
+    });
+    return { ok: true, printJobId: job.id };
   }
 
   async summary() {

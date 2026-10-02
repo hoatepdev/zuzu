@@ -67,12 +67,12 @@ Phần lớn screen tự ghép trực tiếp AntD `Card`, `Descriptions`, `List`
 
 ### Nhận đồ
 
-`SĐT hoặc Chưa xác định khách → lưu ý → tạo đơn → backend in bill → quay Home`
+`SĐT hoặc Chưa xác định khách → lưu ý → tạo đơn + PrintJob → quay Home`
 
 - Chưa cân, chưa chọn dịch vụ, chưa tính tiền khi tạo đơn.
 - Customer lookup tự chạy từ 8 ký tự.
 - Khách mới được upsert theo SĐT.
-- Backend trả `printWarning` thay vì rollback đơn khi in lỗi.
+- Print Agent lấy job outbound; lỗi in không rollback đơn và job lỗi vẫn hiển thị trên chi tiết đơn.
 
 ### Hoàn thành
 
@@ -144,12 +144,10 @@ Backend tự:
 
 **Tác động:** nhân viên không biết lỗi mạng, lỗi server hay dữ liệu không tồn tại; không có hành động retry đúng ngữ cảnh.
 
-#### P0.4 — Trạng thái lỗi in sau nhận đồ không actionable và biến mất quá nhanh
+#### P0.4 — Đã xử lý: lỗi in được lưu và có thao tác in lại
 
-- `ReceivePage` chỉ đưa `printWarning` vào toast success rồi tự về Home sau 500 ms: `apps/web/src/pages/ReceivePage.tsx:18-19`.
-- Không có “Thử lại” hoặc “Tiếp tục không in” tại thời điểm lỗi.
-
-**Tác động:** trong flow cầm đồ, nhân viên dễ bỏ lỡ lỗi và túi đồ không có bill theo cùng.
+- Tạo đơn và `PrintJob` trong cùng transaction; agent offline không làm mất đơn.
+- Job thất bại sau 3 lần hiển thị trên chi tiết đơn; **IN LẠI BILL** tạo job mới và giữ lịch sử cũ.
 
 ### P1 — Gây chậm thao tác hoặc làm sai hierarchy chính
 

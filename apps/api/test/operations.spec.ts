@@ -2,15 +2,15 @@ import { OrderStatus, PaymentMethod, PrismaClient, Role, ServiceUnit } from '@pr
 import { CustomersService } from '../src/customers/customers.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
 import { OrdersService } from '../src/orders/orders.service';
+import { PrintingService } from '../src/printing/printing.service';
 import { PrismaService } from '../src/prisma.service';
 import { ServicesService } from '../src/services/services.service';
 import { SettingsService } from '../src/settings/settings.service';
 
 const prisma = new PrismaClient();
 const db = prisma as unknown as PrismaService;
-const printing = { print: jest.fn().mockResolvedValue(undefined) };
 const notifications = { orderReady: jest.fn().mockResolvedValue(undefined) };
-const orders = new OrdersService(db, printing as never, notifications as unknown as NotificationsService, new SettingsService(db));
+const orders = new OrdersService(db, new PrintingService(db), notifications as unknown as NotificationsService, new SettingsService(db));
 const customers = new CustomersService(db);
 const services = new ServicesService(db);
 const suffix = Date.now().toString();
@@ -30,6 +30,7 @@ afterAll(async () => {
   await prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.loyaltyTransaction.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { customerId: { in: [customerId, customer2Id].filter(Boolean) } }] } });
   await prisma.notification.deleteMany({ where: { orderId: { in: orderIds } } });
+  await prisma.printJob.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
   if (customerId) await prisma.customer.delete({ where: { id: customerId } });
