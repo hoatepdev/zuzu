@@ -83,6 +83,7 @@ export function AttachCustomerPage() {
             size="large"
             block
             loading={attach.isPending}
+            disabled={attach.isPending}
           >
             {attach.isPending ? "ĐANG GẮN KHÁCH..." : "GẮN KHÁCH"}
           </Button>

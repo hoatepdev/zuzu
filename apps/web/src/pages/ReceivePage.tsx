@@ -1,11 +1,11 @@
 import { CheckOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Form, Input, Radio } from "antd";
+import { Alert, Button, Form, Input } from "antd";
 import { useDeferredValue, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Customer, Order } from "../api/types";
-import { BottomActionBar, PageHeader } from "../components/common";
+import { BottomActionBar, PageHeader, QuickChoice } from "../components/common";
 
 const notes = ["Không có", "Giặt riêng", "Ít thơm", "Không nước xả", "Khác"];
 export function ReceivePage() {
@@ -62,37 +62,42 @@ export function ReceivePage() {
 
   if (printFailedOrder)
     return (
-      <>
-        <PageHeader>Đã tạo {printFailedOrder.code}</PageHeader>
-        <Alert
-          type="error"
-          showIcon
-          message="Không thể kết nối máy in"
-          description={printFailedOrder.printWarning}
-        />
-        {reprint.error && (
+      <div className="print-failure-page">
+        <PageHeader sub="Đơn đã được lưu an toàn">
+          Đã tạo {printFailedOrder.code}
+        </PageHeader>
+        <section className="print-failure-panel">
           <Alert
-            className="list-card"
             type="error"
-            message={reprint.error.message}
             showIcon
+            message="Không thể kết nối máy in"
+            description={printFailedOrder.printWarning}
           />
-        )}
-        <div className="order-actions">
-          <Button
-            type="primary"
-            size="large"
-            block
-            loading={reprint.isPending}
-            onClick={() => reprint.mutate()}
-          >
-            {reprint.isPending ? "ĐANG THỬ LẠI..." : "THỬ IN LẠI"}
-          </Button>
-          <Button size="large" block onClick={() => navigate("/")}>
-            TIẾP TỤC KHÔNG IN
-          </Button>
-        </div>
-      </>
+          {reprint.error && (
+            <Alert type="error" message={reprint.error.message} showIcon />
+          )}
+          <div className="order-actions">
+            <Button
+              type="primary"
+              size="large"
+              block
+              loading={reprint.isPending}
+              disabled={reprint.isPending}
+              onClick={() => reprint.mutate()}
+            >
+              {reprint.isPending ? "ĐANG THỬ LẠI..." : "THỬ IN LẠI"}
+            </Button>
+            <Button
+              size="large"
+              block
+              disabled={reprint.isPending}
+              onClick={() => navigate("/")}
+            >
+              TIẾP TỤC KHÔNG IN
+            </Button>
+          </div>
+        </section>
+      </div>
     );
 
   return (
@@ -109,81 +114,92 @@ export function ReceivePage() {
         />
       )}
       <Form
-        className="task-form"
+        className="task-form receive-form"
         layout="vertical"
         onFinish={(values) => create.mutate(values)}
       >
-        {!unknown && (
-          <>
+        <section className="task-section customer-section">
+          {!unknown && (
+            <>
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[{ required: true, message: "Nhập số điện thoại" }]}
+              >
+                <Input
+                  autoFocus
+                  autoComplete="tel"
+                  inputMode="tel"
+                  size="large"
+                  placeholder="Nhập số điện thoại khách"
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </Form.Item>
+              {customers.isFetching && (
+                <div className="lookup-state" role="status">
+                  Đang tìm khách...
+                </div>
+              )}
+              {found ? (
+                <div className="customer-result" role="status">
+                  <span>Khách hàng</span>
+                  <strong>{found.name ?? "Khách cũ"}</strong>
+                  <small>{found.totalOrders} đơn đã nhận</small>
+                </div>
+              ) : normalizedPhone.length >= 8 && !customers.isFetching ? (
+                <Form.Item
+                  name="customerName"
+                  label="Tên khách mới (không bắt buộc)"
+                >
+                  <Input size="large" placeholder="Nhập tên để dễ nhận biết" />
+                </Form.Item>
+              ) : null}
+            </>
+          )}
+          {unknown && (
+            <div className="unknown-banner" role="status">
+              Đang nhận cho khách chưa xác định
+            </div>
+          )}
+          <Button
+            className={`unknown-toggle ${unknown ? "active" : ""}`}
+            block
+            aria-pressed={unknown}
+            disabled={create.isPending}
+            onClick={() => setUnknown((value) => !value)}
+          >
+            <span className="ut-box" aria-hidden="true">
+              <CheckOutlined />
+            </span>
+            <span>
+              Khách để đồ nhưng <em>chưa rõ thông tin</em>
+            </span>
+            <span className="ut-state">{unknown ? "Bỏ chọn" : "Chọn"}</span>
+          </Button>
+        </section>
+
+        <section className="task-section note-section">
+          <Form.Item label="Lưu ý cho đơn">
+            <QuickChoice
+              options={notes}
+              value={note}
+              disabled={create.isPending}
+              onChange={(event) => setNote(event.target.value)}
+            />
+          </Form.Item>
+          {note === "Khác" && (
             <Form.Item
-              name="phone"
-              label="Số điện thoại"
-              rules={[{ required: true, message: "Nhập số điện thoại" }]}
+              name="customNote"
+              label="Lưu ý khác"
+              rules={[{ required: true, message: "Nhập lưu ý" }]}
             >
-              <Input
-                autoFocus
-                autoComplete="tel"
-                inputMode="tel"
-                size="large"
-                onChange={(event) => setPhone(event.target.value)}
+              <Input.TextArea
+                rows={3}
+                placeholder="Ví dụ: đồ dễ phai màu"
               />
             </Form.Item>
-            {customers.isFetching && (
-              <div className="customer-match">Đang tìm khách...</div>
-            )}
-            {found ? (
-              <Alert
-                className="customer-match"
-                type="success"
-                message={`${found.name ?? "Khách cũ"} · ${found.totalOrders} đơn`}
-                showIcon
-              />
-            ) : normalizedPhone.length >= 8 && !customers.isFetching ? (
-              <Form.Item
-                name="customerName"
-                label="Tên khách mới (không bắt buộc)"
-              >
-                <Input size="large" />
-              </Form.Item>
-            ) : null}
-          </>
-        )}
-        {unknown && (
-          <div className="unknown-banner" role="status">
-            Đang nhận cho khách chưa xác định
-          </div>
-        )}
-        <Button
-          className={`unknown-toggle ${unknown ? "active" : ""}`}
-          block
-          aria-pressed={unknown}
-          onClick={() => setUnknown((value) => !value)}
-        >
-          <span className="ut-box" aria-hidden="true">
-            <CheckOutlined />
-          </span>
-          <span>
-            Khách để đồ nhưng <em>chưa rõ thông tin</em>
-          </span>
-          <span className="ut-state">{unknown ? "Bỏ chọn" : "Chọn"}</span>
-        </Button>
-        <Form.Item label="Lưu ý" style={{ marginTop: 18 }}>
-          <Radio.Group
-            className="quick-choice"
-            options={notes}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Form.Item>
-        {note === "Khác" && (
-          <Form.Item
-            name="customNote"
-            label="Lưu ý khác"
-            rules={[{ required: true, message: "Nhập lưu ý" }]}
-          >
-            <Input.TextArea rows={3} />
-          </Form.Item>
-        )}
+          )}
+        </section>
         <BottomActionBar>
           <Button
             type="primary"
@@ -191,6 +207,7 @@ export function ReceivePage() {
             size="large"
             block
             loading={create.isPending}
+            disabled={create.isPending}
           >
             {create.isPending ? "ĐANG TẠO ĐƠN..." : "NHẬN ĐỒ"}
           </Button>

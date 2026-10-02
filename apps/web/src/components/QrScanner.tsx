@@ -47,17 +47,7 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
   };
 
   return (
-    <div className="scanner-shell">
-      {error && (
-        <div className="scanner-foot">
-          <Alert
-            type="warning"
-            message={error}
-            showIcon
-            action={<Button onClick={retry}>Thử lại</Button>}
-          />
-        </div>
-      )}
+    <div className={`scanner-shell ${error ? "has-camera-error" : ""}`}>
       <div className="scanner-viewport">
         <video
           ref={video}
@@ -66,20 +56,34 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
           playsInline
           aria-label="Camera quét mã QR"
         />
-        <div className="scan-frame" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-          <i />
-          <span className="scan-line" />
-        </div>
-        <p className="scan-hint">Đưa mã QR trên bill vào khung</p>
+        {!error && (
+          <>
+            <div className="scan-frame" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+              <span className="scan-line" />
+            </div>
+            <p className="scan-hint">Đưa mã QR trên bill vào khung</p>
+          </>
+        )}
+        {error && (
+          <div className="camera-error">
+            <Alert
+              type="warning"
+              message="Không mở được camera"
+              description={error}
+              showIcon
+              action={
+                <Button size="large" onClick={retry}>
+                  THỬ LẠI
+                </Button>
+              }
+            />
+          </div>
+        )}
       </div>
-      {!error && (
-        <div className="scanner-retry">
-          <Button onClick={retry}>Mở lại camera</Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,11 +1,17 @@
 import { PrinterOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button, Input, Modal, Radio } from "antd";
+import { Alert, App as AntApp, Button, Input, Modal } from "antd";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order } from "../api/types";
-import { BottomActionBar, EmptyState, Money, StatusBadge } from "../components/common";
+import {
+  BottomActionBar,
+  EmptyState,
+  Money,
+  QuickChoice,
+  StatusBadge,
+} from "../components/common";
 import { useSession } from "../session";
 
 const maskPhone = (phone?: string) =>
@@ -54,7 +60,14 @@ export function OrderPage() {
     },
   });
 
-  if (order.isLoading) return <div className="center">Đang tải...</div>;
+  if (order.isLoading)
+    return (
+      <div className="order-loading" role="status">
+        <span />
+        <span />
+        <span />
+      </div>
+    );
   if (!order.data)
     return <EmptyState description={order.error?.message ?? "Không tìm thấy đơn"} />;
   const data = order.data;
@@ -103,57 +116,62 @@ export function OrderPage() {
         </div>
         {data.customer ? (
           <div className="oh-customer">
-            {data.customer.name ?? "Khách hàng"}
+            <span>Khách hàng</span>
+            <strong>{data.customer.name ?? "Khách hàng"}</strong>
             <small>{maskPhone(data.customer.phone)}</small>
           </div>
         ) : (
-          <div style={{ marginTop: 12 }}>
+          <div className="oh-unknown">
             <span className="unknown-badge">Chưa xác định khách</span>
           </div>
         )}
         {data.note && (
           <div className="note-callout">
-            <small>LƯU Ý</small>
-            <strong>{data.note.toUpperCase()}</strong>
+            <small>Lưu ý quan trọng</small>
+            <strong>{data.note}</strong>
           </div>
         )}
-        <div className="oh-amount">
-          <small>Thành tiền</small>
-          <Money className="money-hero" value={data.total} />
+        <div className="order-metrics">
+          <div className="order-metric">
+            <span>Khối lượng</span>
+            <strong>{data.weight ? `${data.weight} kg` : "Chưa cân"}</strong>
+          </div>
+          <div className="order-metric amount">
+            <span>{canReturn ? "Cần thanh toán" : "Thành tiền"}</span>
+            <Money className="money-hero" value={data.total} />
+          </div>
         </div>
       </section>
 
-      <div className="detail-list">
+      <section className="detail-list" aria-label="Thông tin đơn">
         <div className="detail-row">
           <span>Nhận lúc</span>
           <strong>{new Date(data.createdAt).toLocaleString("vi-VN")}</strong>
-        </div>
-        <div className="detail-row">
-          <span>Khối lượng</span>
-          <strong>{data.weight ? `${data.weight} kg` : "Chưa cân"}</strong>
         </div>
         <div className="detail-row">
           <span>Dịch vụ</span>
           <strong>{item?.serviceName ?? "Chưa chọn"}</strong>
         </div>
         {canReturn && (
-          <div className="detail-row">
-            <span>Điểm được cộng</span>
-            <strong>+{data.pointsToEarn ?? 0}</strong>
+          <div className="detail-row loyalty-row">
+            <span>Điểm sau khi trả đồ</span>
+            <strong>+{data.pointsToEarn ?? 0} điểm</strong>
           </div>
         )}
-      </div>
+      </section>
 
       {canReturn && (
         <section className="payment-panel">
-          <label>
-            <strong>Thanh toán</strong>
-          </label>
-          <Radio.Group
-            className="quick-choice"
+          <div className="section-heading">
+            <strong>Chọn cách thanh toán</strong>
+            <small>Xác nhận cùng khách trước khi trả đồ</small>
+          </div>
+          <QuickChoice
+            className="payment-choice"
             optionType="button"
             buttonStyle="solid"
             value={paymentMethod}
+            disabled={returnOrder.isPending}
             options={[
               { label: "Tiền mặt", value: "CASH" },
               { label: "Chuyển khoản", value: "BANK_TRANSFER" },
@@ -190,6 +208,7 @@ export function OrderPage() {
           block
           icon={<PrinterOutlined />}
           loading={reprint.isPending}
+          disabled={reprint.isPending}
           onClick={() => reprint.mutate()}
         >
           IN LẠI BILL
@@ -221,6 +240,7 @@ export function OrderPage() {
             size="large"
             block
             loading={returnOrder.isPending}
+            disabled={returnOrder.isPending}
             onClick={() => returnOrder.mutate(paymentMethod)}
           >
             {returnOrder.isPending ? "ĐANG TRẢ ĐỒ..." : "TRẢ ĐỒ"}
@@ -232,7 +252,7 @@ export function OrderPage() {
         title="Huỷ đơn"
         open={cancelOpen}
         onCancel={() => setCancelOpen(false)}
-        onOk={() => cancel.mutate()}
+        onOk={() => !cancel.isPending && cancel.mutate()}
         okText="Huỷ đơn"
         cancelText="Quay lại"
         okButtonProps={{ danger: true, disabled: reason.trim().length < 3 }}

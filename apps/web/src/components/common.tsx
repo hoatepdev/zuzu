@@ -91,12 +91,17 @@ export function BottomActionBar({ children }: { children: React.ReactNode }) {
 }
 
 export function QuickChoice({
+  className = "",
+  optionType = "button",
+  buttonStyle = "solid",
   ...props
 }: React.ComponentProps<typeof Radio.Group>) {
   return (
     <Radio.Group
-      className={`quick-choice ${(props.className ?? "").trim()}`.trim()}
       {...props}
+      className={`quick-choice ${className}`.trim()}
+      optionType={optionType}
+      buttonStyle={buttonStyle}
     />
   );
 }

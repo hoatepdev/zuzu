@@ -15,24 +15,25 @@ export function ScanPage() {
   return (
     <div className="scanner-page">
       <QrScanner onScan={open} />
-      <div className="scanner-foot">
-        <div className="divider">hoặc nhập mã đơn</div>
-        <Form onFinish={({ code }) => open(code)}>
+      <section className="scanner-foot" aria-label="Tìm đơn bằng mã">
+        <div className="divider">Hoặc nhập mã đơn</div>
+        <Form className="manual-code-form" onFinish={({ code }) => open(code)}>
           <Form.Item
             name="code"
             rules={[{ required: true, message: "Nhập mã đơn" }]}
           >
             <Input
+              autoCapitalize="characters"
               size="large"
               placeholder="Ví dụ: ZU-0182"
               prefix={<SearchOutlined />}
             />
           </Form.Item>
-          <Button htmlType="submit" size="large" block>
+          <Button htmlType="submit" size="large">
             TÌM ĐƠN
           </Button>
         </Form>
-      </div>
+      </section>
     </div>
   );
 }
