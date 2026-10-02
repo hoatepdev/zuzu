@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STAFF
+  MANAGER
+  OWNER
+}
+
+enum OrderStatus {
+  PROCESSING
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum ServiceUnit {
+  KG
+  ITEM
+  PAIR
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+enum NotificationStatus {
+  SENT
+  ERROR
+  SKIPPED
+}
+
+model User {
+  id              String     @id @default(cuid())
+  username        String     @unique
+  phone           String?    @unique
+  passwordHash    String
+  name            String
+  role            Role
+  active          Boolean    @default(true)
+  createdOrders   Order[]    @relation("CreatedOrders")
+  returnedOrders  Order[]    @relation("ReturnedOrders")
+  payments        Payment[]
+  auditLogs       AuditLog[]
+  createdExpenses Expense[]  @relation("CreatedExpenses")
+  voidedExpenses  Expense[]  @relation("VoidedExpenses")
+  openedShifts    Shift[]    @relation("OpenedShifts")
+  closedShifts    Shift[]    @relation("ClosedShifts")
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Customer {
+  id                String               @id @default(cuid())
+  phone             String               @unique
+  name              String?
+  note              String?
+  laundryPreference String?
+  marketingOptIn    Boolean              @default(false)
+  totalPoints       Int                  @default(0)
+  firstOrderAt      DateTime?
+  lastOrderAt       DateTime?
+  totalOrders       Int                  @default(0)
+  totalKg           Decimal              @default(0) @db.Decimal(10, 2)
+  totalSpent        Decimal              @default(0) @db.Decimal(14, 0)
+  orders            Order[]
+  loyalty           LoyaltyTransaction[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([phone])
+}
+
+model Order {
+  id              String               @id @default(cuid())
+  sequence        Int                  @unique @default(autoincrement())
+  code            String               @unique
+  customerId      String?
+  customer        Customer?            @relation(fields: [customerId], references: [id])
+  customerUnknown Boolean              @default(false)
+  note            String?
+  status          OrderStatus          @default(PROCESSING)
+  weight          Decimal?             @db.Decimal(10, 2)
+  subtotal        Decimal?             @db.Decimal(14, 0)
+  discount        Decimal              @default(0) @db.Decimal(14, 0)
+  total           Decimal?             @db.Decimal(14, 0)
+  createdById     String
+  createdBy       User                 @relation("CreatedOrders", fields: [createdById], references: [id])
+  returnedById    String?
+  returnedBy      User?                @relation("ReturnedOrders", fields: [returnedById], references: [id])
+  readyAt         DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  items           OrderItem[]
+  payments        Payment[]
+  loyalty         LoyaltyTransaction[]
+  notifications   Notification[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([customerId])
+}
+
+model Service {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  unit      ServiceUnit
+  price     Decimal     @db.Decimal(14, 0)
+  active    Boolean     @default(true)
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model OrderItem {
+  id          String      @id @default(cuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id])
+  serviceId   String
+  service     Service     @relation(fields: [serviceId], references: [id])
+  serviceName String
+  unit        ServiceUnit
+  quantity    Decimal     @db.Decimal(10, 2)
+  unitPrice   Decimal     @db.Decimal(14, 0)
+  lineTotal   Decimal     @db.Decimal(14, 0)
+  createdAt   DateTime    @default(now())
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String        @unique
+  order       Order         @relation(fields: [orderId], references: [id])
+  amount      Decimal       @db.Decimal(14, 0)
+  method      PaymentMethod
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  shiftId     String?
+  shift       Shift?        @relation(fields: [shiftId], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@index([orderId])
+  @@index([shiftId])
+}
+
+model LoyaltyTransaction {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  orderId    String?  @unique
+  order      Order?   @relation(fields: [orderId], references: [id])
+  points     Int
+  type       String
+  createdAt  DateTime @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  orderId   String
+  order     Order              @relation(fields: [orderId], references: [id])
+  channel   String
+  status    NotificationStatus
+  message   String
+  error     String?
+  createdAt DateTime           @default(now())
+
+  @@index([status])
+}
+
+model Expense {
+  id            String        @id @default(cuid())
+  amount        Decimal       @db.Decimal(14, 0)
+  category      String
+  description   String
+  expenseDate   DateTime
+  paymentMethod PaymentMethod
+  receiptUrl    String?
+  createdById   String
+  createdBy     User          @relation("CreatedExpenses", fields: [createdById], references: [id])
+  shiftId       String?
+  shift         Shift?        @relation(fields: [shiftId], references: [id])
+  voidedAt      DateTime?
+  voidedById    String?
+  voidedBy      User?         @relation("VoidedExpenses", fields: [voidedById], references: [id])
+  voidReason    String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([expenseDate])
+  @@index([shiftId])
+  @@index([voidedAt])
+}
+
+model Shift {
+  id                   String    @id @default(cuid())
+  openedById           String
+  openedBy             User      @relation("OpenedShifts", fields: [openedById], references: [id])
+  closedById           String?
+  closedBy             User?     @relation("ClosedShifts", fields: [closedById], references: [id])
+  openedAt             DateTime  @default(now())
+  closedAt             DateTime?
+  cashRevenue          Decimal?  @db.Decimal(14, 0)
+  bankTransferRevenue  Decimal?  @db.Decimal(14, 0)
+  cashExpenses         Decimal?  @db.Decimal(14, 0)
+  bankTransferExpenses Decimal?  @db.Decimal(14, 0)
+  systemCash           Decimal?  @db.Decimal(14, 0)
+  actualCash           Decimal?  @db.Decimal(14, 0)
+  difference           Decimal?  @db.Decimal(14, 0)
+  payments             Payment[]
+  expenses             Expense[]
+
+  @@index([openedAt])
+  @@index([closedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model StoreSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
