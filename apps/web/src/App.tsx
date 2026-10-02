@@ -2,6 +2,7 @@ import {
   AuditOutlined,
   DashboardOutlined,
   DollarOutlined,
+  HistoryOutlined,
   HomeOutlined,
   OrderedListOutlined,
   ScanOutlined,
@@ -11,11 +12,10 @@ import {
   UserOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu } from 'antd';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from './session';
+import { ZuzuWordmark } from './components/common';
 
-const { Header, Content, Sider } = Layout;
 const mobileItems = [
   { key: '/', icon: <HomeOutlined/>, text: 'Trang chủ' },
   { key: '/scan', icon: <ScanOutlined/>, text: 'Quét QR' },
@@ -27,7 +27,7 @@ const operations = [
   { key: '/orders', icon: <OrderedListOutlined/>, text: 'Đơn hàng' },
   { key: '/customers', icon: <TeamOutlined/>, text: 'Khách hàng' },
   { key: '/expenses', icon: <DollarOutlined/>, text: 'Chi phí' },
-  { key: '/shifts', icon: <OrderedListOutlined/>, text: 'Chốt ca' },
+  { key: '/shifts', icon: <HistoryOutlined/>, text: 'Chốt ca' },
 ];
 const management = [
   { key: '/users', icon: <UserSwitchOutlined/>, text: 'Nhân viên', ownerOnly: true },
@@ -43,47 +43,81 @@ const staffDesktop = [
   { key: '/profile', icon: <UserOutlined/>, text: 'Tài khoản' },
 ];
 
+const roleLabels: Record<string, string> = { OWNER: 'Chủ cửa hàng', MANAGER: 'Quản lý', STAFF: 'Nhân viên' };
+const initials = (name = '') => name.trim().split(/\s+/).filter(Boolean).slice(-2).map((word) => word[0]!.toUpperCase()).join('');
+
 export function App() {
   const location = useLocation();
   const session = useSession();
-  const isStaff = session.data?.role === 'STAFF';
-  const desktopItems = isStaff
-    ? staffDesktop
-    : [...operations, ...management.filter((item) => !item.ownerOnly || session.data?.role === 'OWNER')];
+  const role = session.data?.role;
+  const isStaff = role === 'STAFF';
+  const desktopGroups: Array<{ label?: string; items: typeof operations }> = isStaff
+    ? [{ items: staffDesktop }]
+    : [
+      { label: 'Vận hành', items: operations },
+      { label: 'Quản lý', items: management.filter((item) => !item.ownerOnly || role === 'OWNER') },
+    ];
+  const desktopItems = desktopGroups.flatMap((group) => group.items);
   const selected = desktopItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key
     ?? (location.pathname === '/' ? '/' : undefined);
-  const menuItems = isStaff
-    ? desktopItems.map((item) => ({ key: item.key, icon: item.icon, label: <Link to={item.key}>{item.text}</Link> }))
-    : [
-      { type: 'group' as const, label: 'Vận hành', children: operations.map((item) => ({ key: item.key, icon: item.icon, label: <Link to={item.key}>{item.text}</Link> })) },
-      { type: 'group' as const, label: 'Quản lý', children: management.filter((item) => !item.ownerOnly || session.data?.role === 'OWNER').map((item) => ({ key: item.key, icon: item.icon, label: <Link to={item.key}>{item.text}</Link> })) },
-    ];
+  const mobileSelected = location.pathname === '/'
+    ? '/'
+    : mobileItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key;
 
-  return <Layout className="app-layout">
+  return <div className="shell">
     <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
-    <Sider width={240} className="desktop-nav">
-      <Link to={isStaff ? '/' : '/dashboard'} className="brand nav-brand">ZUZU</Link>
-      <Menu mode="inline" selectedKeys={selected ? [selected] : []} items={menuItems}/>
-    </Sider>
-    <Layout>
-      <Header className="app-header">
-        <Link to="/" className="mobile-brand">ZUZU</Link>
-        <span className="current-user">{session.data?.name}</span>
-      </Header>
-      <Content id="main-content" className={`content ${isStaff ? 'staff-content' : 'management-content'}`}>
-        <Outlet/>
-      </Content>
-      <nav className="mobile-nav" aria-label="Điều hướng chính">
-        {mobileItems.map((item) => <Link
-          key={item.key}
-          to={item.key}
-          className={selected === item.key ? 'active' : ''}
-          aria-current={selected === item.key ? 'page' : undefined}
-        >
-          {item.icon}
-          <small>{item.text}</small>
-        </Link>)}
+    <aside className="side-nav">
+      <Link to={isStaff ? '/' : '/dashboard'} className="side-brand" aria-label="ZUZU — về trang chính">
+        <ZuzuWordmark light/>
+      </Link>
+      <nav aria-label="Điều hướng chính">
+        {desktopGroups.map((group, index) => <div key={group.label ?? index} className="nav-group">
+          {group.label && <div className="nav-group-label">{group.label}</div>}
+          {group.items.map((item) => (
+            <Link
+              key={item.key}
+              to={item.key}
+              className={`nav-item ${selected === item.key ? 'active' : ''}`}
+              aria-current={selected === item.key ? 'page' : undefined}
+            >
+              {item.icon}
+              {item.text}
+            </Link>
+          ))}
+        </div>)}
       </nav>
-    </Layout>
-  </Layout>;
+      <Link to="/profile" className="side-user">
+        <span className="avatar" aria-hidden="true">{initials(session.data?.name)}</span>
+        <span>
+          <b>{session.data?.name}</b>
+          <small>{role ? roleLabels[role] : ''}</small>
+        </span>
+      </Link>
+    </aside>
+    <div className="shell-main">
+      <header className="topbar">
+        <Link to="/" aria-label="ZUZU — về trang chính"><ZuzuWordmark/></Link>
+        <Link to="/profile" className="topbar-user" aria-label="Tài khoản">
+          <span className="avatar" aria-hidden="true">{initials(session.data?.name)}</span>
+          <b>{session.data?.name}</b>
+        </Link>
+      </header>
+      <main id="main-content" className={`content ${isStaff ? 'staff-content' : 'management-content'}`}>
+        <Outlet/>
+      </main>
+      <nav className="bottom-nav" aria-label="Điều hướng chính">
+        {mobileItems.map((item) => (
+          <Link
+            key={item.key}
+            to={item.key}
+            className={mobileSelected === item.key ? 'active' : ''}
+            aria-current={mobileSelected === item.key ? 'page' : undefined}
+          >
+            <span className="bn-icon" aria-hidden="true">{item.icon}</span>
+            <small>{item.text}</small>
+          </Link>
+        ))}
+      </nav>
+    </div>
+  </div>;
 }
