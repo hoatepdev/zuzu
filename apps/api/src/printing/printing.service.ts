@@ -41,7 +41,7 @@ export class PrintingService {
       const rows = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT "id"
         FROM "PrintJob"
-        WHERE "status" = 'PENDING'::"PrintJobStatus" AND "availableAt" <= NOW()
+        WHERE "status" = 'PENDING'::"PrintJobStatus" AND "availableAt" <= clock_timestamp()
         ORDER BY "createdAt" ASC
         FOR UPDATE SKIP LOCKED
         LIMIT 1

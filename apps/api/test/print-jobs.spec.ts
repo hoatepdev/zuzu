@@ -33,6 +33,10 @@ const claimAndFail = async (jobId: string) => {
 };
 
 beforeAll(async () => {
+  // Dev DB is shared with manual/browser use; keep pre-existing queue entries out of
+  // claim-order assertions without destroying them (PENDING deferred 1h, stale leases renewed).
+  await prisma.printJob.updateMany({ where: { status: PrintJobStatus.PENDING }, data: { availableAt: new Date(Date.now() + 3_600_000) } });
+  await prisma.printJob.updateMany({ where: { status: PrintJobStatus.PRINTING }, data: { claimedAt: new Date() } });
   userId = (await prisma.user.create({ data: { username: `prn-${suffix}`, name: 'Print Test', role: Role.STAFF, passwordHash: 'unused' } })).id;
 });
 
