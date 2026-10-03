@@ -80,11 +80,13 @@ docker compose -f docker-compose.prod.yml restart api          # restart API onl
 Production never runs the development seed (`prisma db seed` creates `owner/manager/staff` with password `zuzu123` — development only). Bootstrap creates exactly one Owner plus the default service catalog, with the password supplied through the environment and never logged:
 
 ```bash
-docker compose -f docker-compose.prod.yml exec \
+docker compose -f docker-compose.vps.yml exec \
   -e BOOTSTRAP_OWNER_USERNAME=<username> \
   -e BOOTSTRAP_OWNER_PASSWORD=<strong-temporary-password> \
-  api npm run db:bootstrap
+  api node dist-scripts/prisma/bootstrap.js
 ```
+
+(Inside the container the bootstrap/seed scripts are pre-compiled to `dist-scripts/`; `npm run db:bootstrap` with ts-node is for local development only.)
 
 Change the temporary password at first login, then create the real staff accounts from the management UI.
 
@@ -95,7 +97,7 @@ For the pilot, staging and production share one VPS **sequentially, never concur
 1. Deploy as above, then seed development test accounts:
 
    ```bash
-   docker compose -f docker-compose.prod.yml exec api npm run db:seed
+   docker compose -f docker-compose.vps.yml exec api node dist-scripts/prisma/seed.js
    ```
 
 2. Run the full staff flow from a real phone: login → Receive → order with multiple services + edited price → READY_FOR_PICKUP → payment → COMPLETED.
