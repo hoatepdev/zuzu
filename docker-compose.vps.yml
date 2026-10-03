@@ -51,7 +51,7 @@ services:
     volumes:
       - ./deploy/Caddyfile.vps:/etc/caddy/Caddyfile:ro
     ports:
-      - "127.0.0.1:8080:80"
+      - "127.0.0.1:8080:8080"
 
 volumes:
   pgdata:
