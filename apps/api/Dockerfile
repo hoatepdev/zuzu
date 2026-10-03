@@ -15,6 +15,7 @@ COPY --from=build /app/package.json /app/package.json
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/apps/api/package.json ./package.json
 COPY --from=build /app/apps/api/dist ./dist
+COPY --from=build /app/apps/api/src ./src
 COPY --from=build /app/apps/api/prisma ./prisma
 EXPOSE 3100
 CMD ["sh", "-c", "npm run db:migrate:deploy && npm run start:prod"]
