@@ -4,7 +4,7 @@
 
 One VPS runs everything for the single-shop pilot:
 
-- **Docker Compose** (`docker-compose.prod.yml`) — PostgreSQL 17 + ZUZU API (NestJS) + Caddy
+- **Docker Compose** (`docker-compose.vps.yml`; `docker-compose.prod.yml` is the dedicated-VPS variant where Caddy owns 80/443 directly) — PostgreSQL 17 + ZUZU API (NestJS) + web
 - **Caddy** — serves the Vite web build at `app.<domain>`, reverse-proxies `api.<domain>` to the API, automatic HTTPS via Let's Encrypt (`deploy/Caddyfile`)
 - **Shop computer** — Print Agent, outbound-only polling over HTTPS, ZY908 attached
 
@@ -58,7 +58,7 @@ Never commit `.env.production`, database credentials, session secrets, or `PRINT
 3. Start everything:
 
    ```bash
-   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+   docker compose -f docker-compose.vps.yml --env-file .env.production up -d --build
    ```
 
    What happens: Postgres starts with a persistent volume (`pgdata`) → the API container waits for it, runs `prisma migrate deploy`, then starts (`apps/api/Dockerfile` CMD) → Caddy obtains certificates and serves `app.<domain>` (static files from `apps/web/dist`, SPA fallback via `try_files`) and `api.<domain>` (reverse proxy).
@@ -70,9 +70,9 @@ Never use `prisma migrate dev` against staging or production.
 ### Everyday operations
 
 ```bash
-docker compose -f docker-compose.prod.yml logs -f api          # logs
-docker compose -f docker-compose.prod.yml up -d --build        # deploy latest code (git pull first)
-docker compose -f docker-compose.prod.yml restart api          # restart API only
+docker compose -f docker-compose.vps.yml logs -f api          # logs
+docker compose -f docker-compose.vps.yml up -d --build        # deploy latest code (git pull first)
+docker compose -f docker-compose.vps.yml restart api          # restart API only
 ```
 
 ## First Owner account (production bootstrap)
@@ -90,19 +90,18 @@ docker compose -f docker-compose.vps.yml exec \
 
 Change the temporary password at first login, then create the real staff accounts from the management UI.
 
-## Staging before production (single-VPS pilot sequence)
+## Live endpoints (pilot)
 
-For the pilot, staging and production share one VPS **sequentially, never concurrently**: deploy first as staging, verify, then reset to production. If a permanent separate staging environment is ever needed, repeat this setup on a second VPS.
+- Web: `https://app.otohub.net`
+- API: `https://api.otohub.net` (verify `/health`)
+- VPS: 103.245.236.202, stack at `/opt/zuzu`, shared with other projects — existing nginx + certbot terminate TLS; ZUZU binds only `127.0.0.1:3100` (API) and `127.0.0.1:8080` (static web). Use `docker-compose.vps.yml` there, not `docker-compose.prod.yml`.
+- Print Agent on the shop computer: `ZUZU_API_URL=https://api.otohub.net` + the `PRINT_AGENT_TOKEN` from `/opt/zuzu/.env.production` on the VPS.
 
-1. Deploy as above, then seed development test accounts:
+## First deployment record (2026-10-03)
 
-   ```bash
-   docker compose -f docker-compose.vps.yml exec api node dist-scripts/prisma/seed.js
-   ```
+Deployed directly with the production bootstrap (no `zuzu123` dev seed ever ran against this DB). Verified over the live HTTPS endpoints: owner login (`HttpOnly; Secure; SameSite=Lax` cookie, exact CORS), staff account created via API, order ZU-0001 with 4.2 kg Giặt thường + 1 Chăn + 2 Giày at an edited 45000/pair (subtotal 173000, base prices kept), customer attached, CASH payment, COMPLETED, audit rows written, PrintJob claimed and printed by an off-site Print Agent polling over the internet, IN LẠI BILL created a second job without touching the first.
 
-2. Run the full staff flow from a real phone: login → Receive → order with multiple services + edited price → READY_FOR_PICKUP → payment → COMPLETED.
-3. Run print QA with a local Print Agent (`PRINTER_CONNECTION=console` first, real ZY908 after): agent stopped → job stays queued; restart → claimed; failures → retries → FAILED; IN LẠI BILL → new job.
-4. **Promote to production**: `docker compose -f docker-compose.prod.yml down`, delete the volume (`docker volume rm <project>_pgdata`), rotate `DB_PASSWORD`/`SESSION_SECRET`/`PRINT_AGENT_TOKEN` in `.env.production`, `up -d --build`, then bootstrap the Owner account. All staging test data is destroyed; nothing is carried over.
+Before real customers, still to do by the shop: change the owner password from the temporary one, create real staff accounts from the UI, run the phone checks (iPhone Safari camera/QR), and attach the ZY908. If a clean slate is wanted before opening, wipe and redo: `docker compose -f docker-compose.vps.yml --env-file .env.production down`, `docker volume rm zuzu_pgdata`, rotate the secrets in `.env.production`, `up -d --build`, bootstrap again.
 
 ## Production verification
 
@@ -111,7 +110,7 @@ After promotion, verify: health, login/logout, role guards, camera/QR, order cre
 ## Release and rollback
 
 - Take or confirm a fresh backup before a schema-changing release.
-- Deploying = `git pull && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build`; migrations apply forward-only on boot.
+- Deploying = `git pull && docker compose -f docker-compose.vps.yml --env-file .env.production up -d --build`; migrations apply forward-only on boot.
 - For application regressions without incompatible schema changes, roll back with `git checkout <previous-tag>` and rebuild.
 - Do not manually delete migration rows or roll back SQL on the live database. If a migration is incompatible, stop writes, restore into a new database, point the previous release at it, and verify before reopening traffic.
 
@@ -148,7 +147,7 @@ A VPS has **no provider-side backups** — backup is entirely our job. Policy fo
    0 2 * * * docker exec zuzu-db pg_dump -U zuzu zuzu | gzip > /root/zuzu-backups/zuzu-$(date +\%F).sql.gz && find /root/zuzu-backups -name 'zuzu-*.sql.gz' -mtime +14 -delete
    ```
 
-   (`zuzu-db` is the fixed container name set in `docker-compose.prod.yml`.)
+   (`zuzu-db` is the fixed container name set in `docker-compose.vps.yml`.)
 2. Copy dumps off-box — e.g. from the shop computer nightly: `scp root@<vps>:/root/zuzu-backups/zuzu-$(date +%F).sql.gz .` — or `rclone` to any private cloud storage.
 
 Record the schedule, retention and last successful restore test in the operations log.
@@ -164,7 +163,7 @@ Record the schedule, retention and last successful restore test in the operation
 
    (`docker exec zuzu-db psql -U zuzu -c 'CREATE DATABASE zuzu_restore'` first.)
 2. Verify counts and records in `zuzu_restore` (users, orders, payments, audit, print jobs).
-3. To actually recover: stop writes (`docker compose -f docker-compose.prod.yml stop api`), drop and recreate `zuzu` from the dump, start the API, verify `/health` and login.
+3. To actually recover: stop writes (`docker compose -f docker-compose.vps.yml stop api`), drop and recreate `zuzu` from the dump, start the API, verify `/health` and login.
 
 ### Restore test
 
