@@ -1,4 +1,3 @@
-import { CheckOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Form, Input } from "antd";
 import { useDeferredValue, useState } from "react";
@@ -72,6 +71,26 @@ export function ReceivePage() {
         onFinish={(values) => create.mutate(values)}
       >
         <section className="task-section customer-section">
+          <div className="customer-mode" role="group" aria-label="Thông tin khách">
+            <Button
+              className={!unknown ? "active" : ""}
+              type={!unknown ? "primary" : "default"}
+              aria-pressed={!unknown}
+              onClick={() => setUnknown(false)}
+              disabled={create.isPending}
+            >
+              Có SĐT khách
+            </Button>
+            <Button
+              className={unknown ? "active" : ""}
+              type={unknown ? "primary" : "default"}
+              aria-pressed={unknown}
+              onClick={() => setUnknown(true)}
+              disabled={create.isPending}
+            >
+              Chưa rõ khách
+            </Button>
+          </div>
           {!unknown && (
             <>
               <Form.Item
@@ -114,21 +133,6 @@ export function ReceivePage() {
               Đang nhận cho khách chưa xác định
             </div>
           )}
-          <Button
-            className={`unknown-toggle ${unknown ? "active" : ""}`}
-            block
-            aria-pressed={unknown}
-            disabled={create.isPending}
-            onClick={() => setUnknown((value) => !value)}
-          >
-            <span className="ut-box" aria-hidden="true">
-              <CheckOutlined />
-            </span>
-            <span>
-              Khách để đồ nhưng <em>chưa rõ thông tin</em>
-            </span>
-            <span className="ut-state">{unknown ? "Bỏ chọn" : "Chọn"}</span>
-          </Button>
         </section>
 
         <section className="task-section note-section">

@@ -19,12 +19,29 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useSession } from './session';
 import { ZuzuWordmark } from './components/common';
 
-const mobileItems = [
+const staffMobileItems = [
   { key: '/', icon: <HomeOutlined/>, text: 'Trang chủ' },
   { key: '/scan', icon: <ScanOutlined/>, text: 'Quét QR' },
   { key: '/orders', icon: <OrderedListOutlined/>, text: 'Đơn hàng' },
   { key: '/profile', icon: <UserOutlined/>, text: 'Tài khoản' },
 ];
+const managementMobileItems = [
+  { key: '/dashboard', icon: <DashboardOutlined/>, text: 'Tổng quan' },
+  { key: '/orders', icon: <OrderedListOutlined/>, text: 'Đơn hàng' },
+  { key: '/expenses', icon: <DollarOutlined/>, text: 'Chi phí' },
+  { key: '/profile', icon: <UserOutlined/>, text: 'Tài khoản' },
+];
+
+function mobileItemsFor(role?: string) {
+  return role === 'STAFF' ? staffMobileItems : managementMobileItems;
+}
+
+const mobileHomeFor = (role?: string) => role === 'STAFF' ? '/' : '/dashboard';
+
+const mobileKeyFor = (pathname: string, items: typeof staffMobileItems) =>
+  items.find((item) => item.key !== '/' && item.key !== '/dashboard' && pathname.startsWith(item.key))?.key
+    ?? (items.some((item) => item.key === pathname) ? pathname : undefined);
+
 const operations = [
   { key: '/dashboard', icon: <DashboardOutlined/>, text: 'Tổng quan' },
   { key: '/orders', icon: <OrderedListOutlined/>, text: 'Đơn hàng' },
@@ -91,10 +108,10 @@ export function App() {
     ];
   const desktopItems = desktopGroups.flatMap((group) => group.items);
   const selected = desktopItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key
-    ?? (location.pathname === '/' ? '/' : undefined);
-  const mobileSelected = location.pathname === '/'
-    ? '/'
-    : mobileItems.find((item) => item.key !== '/' && location.pathname.startsWith(item.key))?.key;
+    ?? (location.pathname === mobileHomeFor(role) ? mobileHomeFor(role) : undefined);
+  const mobileItems = mobileItemsFor(role);
+  const mobileSelected = mobileKeyFor(location.pathname, mobileItems)
+    ?? (location.pathname === mobileHomeFor(role) ? mobileHomeFor(role) : undefined);
 
   return <div className="shell">
     <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>

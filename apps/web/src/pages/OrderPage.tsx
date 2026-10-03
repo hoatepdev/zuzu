@@ -232,7 +232,7 @@ export function OrderPage() {
           !data.payments.length && (
             <Link to={`/orders/${data.code}/complete`}>
               <Button size="large" block>
-                SỬA CÂN
+                CHỈNH DỊCH VỤ &amp; GIÁ
               </Button>
             </Link>
           )}
@@ -264,7 +264,7 @@ export function OrderPage() {
         <BottomActionBar>
           <Link to={`/orders/${data.code}/complete`}>
             <Button type="primary" size="large" block>
-              CÂN &amp; HOÀN THÀNH
+              NHẬP DỊCH VỤ &amp; GIÁ
             </Button>
           </Link>
         </BottomActionBar>

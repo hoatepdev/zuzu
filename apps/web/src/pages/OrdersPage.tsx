@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Alert, DatePicker, Input, Select, Spin, Table } from "antd";
 import type { Dayjs } from "dayjs";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order, OrderStatus, Page } from "../api/types";
 import {
@@ -10,6 +10,7 @@ import {
   Money,
   OrderCard,
   PageHeader,
+  QuickChoice,
   StatusBadge,
 } from "../components/common";
 import { useSession } from "../session";
@@ -20,14 +21,44 @@ const statusOptions = [
   { value: "COMPLETED", label: "Đã trả" },
   { value: "CANCELLED", label: "Đã huỷ" },
 ];
+const staffStatusOptions = [
+  { value: "", label: "Tất cả" },
+  { value: "PROCESSING", label: "Đang xử lý" },
+  { value: "READY_FOR_PICKUP", label: "Chờ lấy" },
+];
 export function OrdersPage() {
   const session = useSession();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const management = session.data?.role !== "STAFF";
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<OrderStatus>();
+  const initialStatus = searchParams.get("status") as OrderStatus | null;
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [status, setStatus] = useState<OrderStatus | undefined>(() =>
+    initialStatus && statusOptions.some((option) => option.value === initialStatus)
+      ? initialStatus
+      : undefined,
+  );
   const [dates, setDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const nextSearch = searchParams.get("search") ?? "";
+    const nextStatus = searchParams.get("status") as OrderStatus | null;
+    setSearch((current) => current === nextSearch ? current : nextSearch);
+    setStatus((current) => current === nextStatus ? current : nextStatus ?? undefined);
+  }, [searchParams]);
+
+  const updateStaffFilter = (next: { search?: string; status?: OrderStatus }) => {
+    const params = new URLSearchParams(searchParams);
+    if (next.search !== undefined) {
+      next.search ? params.set("search", next.search) : params.delete("search");
+    }
+    if (next.status !== undefined) {
+      next.status ? params.set("status", next.status) : params.delete("status");
+    }
+    setSearchParams(params, { replace: true });
+    setPage(1);
+  };
   const query = new URLSearchParams({ page: String(page), limit: "20" });
   if (search) query.set("search", search);
   if (status) query.set("status", status);
@@ -46,7 +77,10 @@ export function OrdersPage() {
     queryFn: () =>
       management
         ? api<Page<Order>>(`/orders/page?${query}`)
-        : api<Order[]>(`/orders?search=${encodeURIComponent(search)}`),
+        : api<Order[]>(`/orders?${new URLSearchParams({
+            ...(search ? { search } : {}),
+            ...(status ? { status } : {}),
+          })}`),
   });
   const items = management
     ? (orders.data as Page<Order> | undefined)?.items
@@ -62,10 +96,24 @@ export function OrdersPage() {
           allowClear
           enterButton="Tìm"
           onSearch={(value) => {
-            setSearch(value);
-            setPage(1);
+            if (management) {
+              setSearch(value);
+              setPage(1);
+            } else {
+              updateStaffFilter({ search: value });
+            }
           }}
         />
+        {!management && (
+          <QuickChoice
+            className="staff-status-filter"
+            optionType="button"
+            buttonStyle="solid"
+            options={staffStatusOptions}
+            value={status ?? ""}
+            onChange={(event) => updateStaffFilter({ status: event.target.value as OrderStatus | undefined })}
+          />
+        )}
         {management && (
           <>
             <Select
@@ -173,7 +221,11 @@ export function OrdersPage() {
       ) : (
         <EmptyState
           description={
-            search ? `Không tìm thấy đơn “${search}”` : "Chưa có đơn"
+            search
+              ? `Không tìm thấy đơn “${search}”`
+              : status
+                ? `Không có đơn ${status === "PROCESSING" ? "đang xử lý" : status === "READY_FOR_PICKUP" ? "chờ lấy" : "phù hợp"}`
+                : "Chưa có đơn"
           }
         />
       )}

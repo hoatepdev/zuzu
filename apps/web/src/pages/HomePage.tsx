@@ -75,8 +75,10 @@ export function HomePage() {
           onClose={() => setReceivedCode(undefined)}
           message={
             <>
-              Đã tạo đơn <strong>{receivedCode}</strong> — bill đang in, dán QR
-              lên túi đồ.
+              <strong>ĐÃ TẠO {receivedCode}</strong>
+              <span className="receive-success-copy">
+                Bill đang in. <b>Dán bill/QR lên túi đồ.</b>
+              </span>
             </>
           }
         />
@@ -116,13 +118,13 @@ export function HomePage() {
         role="status"
         aria-label="Tình trạng đơn hàng"
       >
-        <Link to="/orders">
+        <Link to="/orders?status=PROCESSING">
           <strong>{summary.data?.processing ?? 0}</strong> đang xử lý
         </Link>
         <span className="dot-sep" aria-hidden="true">
           ·
         </span>
-        <Link to="/orders" className="warn">
+        <Link to="/orders?status=READY_FOR_PICKUP" className="warn">
           <strong>{summary.data?.ready ?? 0}</strong> chờ khách lấy
         </Link>
         <span className="dot-sep" aria-hidden="true">
