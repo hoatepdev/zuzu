@@ -9,7 +9,13 @@ import { CurrentUser, SessionUser } from '../common/auth.types';
 
 @Controller('auth')
 export class AuthController {
-  private readonly cookie = { httpOnly: true, sameSite: 'lax' as const, secure: process.env.NODE_ENV === 'production' };
+  // COOKIE_SAMESITE=none only for staging on unrelated provider domains (breaks Safari/iPhone);
+  // production uses same-parent-domain subdomains where the default lax works everywhere.
+  private readonly cookie = {
+    httpOnly: true,
+    sameSite: (process.env.COOKIE_SAMESITE === 'none' ? 'none' : 'lax') as 'none' | 'lax',
+    secure: process.env.NODE_ENV === 'production',
+  };
 
   constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {}
 
