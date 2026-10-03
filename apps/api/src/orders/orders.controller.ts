@@ -14,7 +14,7 @@ export class OrdersController {
   @Get('page') page(@Query() query: ListOrdersPageDto) { return this.orders.page(query); }
   @Get() list(@Query() query: ListOrdersDto) { return this.orders.list(query); }
   @Get(':id') get(@Param('id') id: string) { return this.orders.get(id); }
-  @Post(':id/complete') complete(@Param('id') id: string, @Body() dto: CompleteOrderDto, @CurrentUser() user: SessionUser) { return this.orders.complete(id, dto, user.id); }
+  @Post(':id/complete') complete(@Param('id') id: string, @Body() dto: CompleteOrderDto, @CurrentUser() user: SessionUser) { return this.orders.complete(id, dto, user.id, user.role); }
   @Post(':id/attach-customer') attach(@Param('id') id: string, @Body() dto: AttachCustomerDto, @CurrentUser() user: SessionUser) { return this.orders.attachCustomer(id, dto, user.id); }
   @Post(':id/return') returnOrder(@Param('id') id: string, @Body() dto: ReturnOrderDto, @CurrentUser() user: SessionUser) { return this.orders.returnOrder(id, dto, user.id); }
   @Post(':id/reprint') reprint(@Param('id') id: string, @CurrentUser() user: SessionUser) { return this.orders.reprint(id, user.id); }

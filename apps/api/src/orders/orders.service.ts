@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { OrderStatus, Prisma } from '@prisma/client';
+import { OrderStatus, Prisma, Role, ServiceUnit } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrintingService } from '../printing/printing.service';
@@ -82,28 +82,85 @@ export class OrdersService {
     return { ...order, pointsToEarn: order.total ? calculatePoints(order.total, await this.settings.loyaltyVndPerPoint()) : 0 };
   }
 
-  async complete(idOrCode: string, dto: CompleteOrderDto, userId: string) {
+  async complete(idOrCode: string, dto: CompleteOrderDto, userId: string, role: Role = Role.MANAGER) {
     const current = await this.get(idOrCode);
     if (current.status !== OrderStatus.PROCESSING && current.status !== OrderStatus.READY_FOR_PICKUP) throw new BadRequestException('Chỉ đơn đang xử lý hoặc chờ trả mới có thể cập nhật');
     if (current.payments.length) throw new BadRequestException('Đơn đã thanh toán, không thể sửa');
-    const service = await this.prisma.service.findUnique({ where: { id: dto.serviceId } });
-    if (!service?.active) throw new BadRequestException('Dịch vụ không còn hoạt động');
-    const quantity = new Prisma.Decimal(dto.quantity);
-    const subtotal = calculateLineTotal(quantity, service.price);
-    const discount = new Prisma.Decimal(dto.discount ?? 0);
-    if (discount.greaterThan(subtotal)) throw new BadRequestException('Giảm giá vượt thành tiền');
-    const total = subtotal.minus(discount);
+    if (!dto.items.length) throw new BadRequestException('Đơn phải có ít nhất một dịch vụ để hoàn thành');
+    if (dto.discount !== undefined && role === Role.STAFF && !new Prisma.Decimal(dto.discount).equals(current.discount)) {
+      throw new BadRequestException('Nhân viên không thể thay đổi giảm giá đơn');
+    }
+
     const order = await this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.order.updateMany({ where: { id: current.id, status: { in: [OrderStatus.PROCESSING, OrderStatus.READY_FOR_PICKUP] }, payments: { none: {} } }, data: { weight: service.unit === 'KG' ? quantity : null, subtotal, discount, total, readyAt: current.readyAt ?? new Date(), status: OrderStatus.READY_FOR_PICKUP } });
-      if (!claimed.count) throw new BadRequestException('Đơn đã thay đổi, không thể cập nhật');
-      await tx.orderItem.deleteMany({ where: { orderId: current.id } });
-      await tx.orderItem.create({ data: { orderId: current.id, serviceId: service.id, serviceName: service.name, unit: service.unit, quantity, unitPrice: service.price, lineTotal: subtotal } });
-      const saved = await tx.order.findUniqueOrThrow({ where: { id: current.id }, include: details });
-      const adjusting = current.status === OrderStatus.READY_FOR_PICKUP;
-      await tx.auditLog.create({ data: { userId, action: adjusting ? 'ORDER_ADJUSTED' : 'ORDER_COMPLETED', entityType: 'ORDER', entityId: saved.id, before: adjusting ? { total: current.total?.toString(), discount: current.discount.toString() } : { status: current.status }, after: { status: saved.status, quantity: quantity.toString(), subtotal: subtotal.toString(), discount: discount.toString(), total: total.toString(), serviceId: service.id } } });
+      const latest = await tx.order.findUniqueOrThrow({ where: { id: current.id }, include: { items: true, payments: true } });
+      if ((latest.status !== OrderStatus.PROCESSING && latest.status !== OrderStatus.READY_FOR_PICKUP) || latest.payments.length) {
+        throw new BadRequestException('Đơn đã thay đổi, không thể cập nhật');
+      }
+      const expectedUpdatedAt = dto.expectedUpdatedAt ? new Date(dto.expectedUpdatedAt) : current.updatedAt;
+      if (Number.isNaN(expectedUpdatedAt.getTime()) || latest.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+        throw new BadRequestException('Đơn đã được cập nhật ở thiết bị khác. Vui lòng tải lại.');
+      }
+
+      const serviceIds = [...new Set(dto.items.map((item) => item.serviceId))];
+      const services = await tx.service.findMany({ where: { id: { in: serviceIds } } });
+      const serviceById = new Map(services.map((service) => [service.id, service]));
+      const existingById = new Map(latest.items.map((item) => [item.id, item]));
+      const seenIds = new Set<string>();
+      const prepared = dto.items.map((input) => {
+        if (input.id && (seenIds.has(input.id) || !existingById.has(input.id))) throw new BadRequestException('Dòng dịch vụ không hợp lệ');
+        if (input.id) seenIds.add(input.id);
+        const existing = input.id ? existingById.get(input.id) : undefined;
+        const service = serviceById.get(input.serviceId);
+        const sameService = existing?.serviceId === input.serviceId;
+        if (!service || (!service.active && !sameService)) throw new BadRequestException('Dịch vụ không còn hoạt động');
+        const unit = sameService ? existing!.unit : service.unit;
+        const quantity = new Prisma.Decimal(input.quantity);
+        if ((unit === ServiceUnit.ITEM || unit === ServiceUnit.PAIR) && !quantity.isInteger()) {
+          throw new BadRequestException('Dịch vụ theo món/đôi phải có số lượng nguyên');
+        }
+        const baseUnitPrice = sameService ? existing!.baseUnitPrice : service.price;
+        const unitPrice = input.unitPrice === undefined ? (sameService ? existing!.unitPrice : service.price) : new Prisma.Decimal(input.unitPrice);
+        const lineTotal = calculateLineTotal(quantity, unitPrice);
+        return {
+          input,
+          existing,
+          service,
+          sameService,
+          unit,
+          quantity,
+          baseUnitPrice,
+          unitPrice,
+          lineTotal,
+          serviceName: sameService ? existing!.serviceName : service.name,
+          priceAdjustmentReason: input.priceAdjustmentReason ?? null,
+        };
+      });
+      const subtotal = prepared.reduce((sum, item) => sum.plus(item.lineTotal), new Prisma.Decimal(0));
+      const discount = dto.discount === undefined ? latest.discount : new Prisma.Decimal(dto.discount);
+      if (discount.isNegative()) throw new BadRequestException('Giảm giá không hợp lệ');
+      if (discount.greaterThan(subtotal)) throw new BadRequestException('Giảm giá vượt thành tiền');
+      const total = subtotal.minus(discount);
+      const weight = prepared.filter((item) => item.unit === ServiceUnit.KG).reduce((sum, item) => sum.plus(item.quantity), new Prisma.Decimal(0));
+      const claimed = await tx.order.updateMany({
+        where: { id: latest.id, updatedAt: latest.updatedAt, status: { in: [OrderStatus.PROCESSING, OrderStatus.READY_FOR_PICKUP] }, payments: { none: {} } },
+        data: { weight, subtotal, discount, total, readyAt: latest.readyAt ?? new Date(), status: OrderStatus.READY_FOR_PICKUP },
+      });
+      if (!claimed.count) throw new BadRequestException('Đơn đã được cập nhật ở thiết bị khác. Vui lòng tải lại.');
+
+      const keepIds = prepared.flatMap((item) => item.input.id ? [item.input.id] : []);
+      await tx.orderItem.deleteMany({ where: { orderId: latest.id, id: { notIn: keepIds } } });
+      for (const item of prepared) {
+        const data = { serviceId: item.service.id, serviceName: item.serviceName, unit: item.unit, quantity: item.quantity, baseUnitPrice: item.baseUnitPrice, unitPrice: item.unitPrice, lineTotal: item.lineTotal, priceAdjustmentReason: item.priceAdjustmentReason };
+        if (item.existing) await tx.orderItem.update({ where: { id: item.existing.id }, data });
+        else await tx.orderItem.create({ data: { orderId: latest.id, ...data } });
+      }
+      const saved = await tx.order.findUniqueOrThrow({ where: { id: latest.id }, include: details });
+      const snapshot = (item: typeof prepared[number]) => ({ id: item.input.id, serviceId: item.service.id, serviceName: item.serviceName, unit: item.unit, quantity: item.quantity.toString(), baseUnitPrice: item.baseUnitPrice.toString(), unitPrice: item.unitPrice.toString(), lineTotal: item.lineTotal.toString(), priceAdjustmentReason: item.priceAdjustmentReason });
+      const beforeItems = latest.items.map((item) => ({ id: item.id, serviceId: item.serviceId, serviceName: item.serviceName, unit: item.unit, quantity: item.quantity.toString(), baseUnitPrice: item.baseUnitPrice.toString(), unitPrice: item.unitPrice.toString(), lineTotal: item.lineTotal.toString(), priceAdjustmentReason: item.priceAdjustmentReason }));
+      await tx.auditLog.create({ data: { userId, action: latest.status === OrderStatus.PROCESSING ? 'ORDER_COMPLETED' : 'ORDER_ADJUSTED', entityType: 'ORDER', entityId: saved.id, before: { status: latest.status, discount: latest.discount.toString(), items: beforeItems }, after: { status: saved.status, discount: discount.toString(), subtotal: subtotal.toString(), total: total.toString(), weight: weight.toString(), items: prepared.map(snapshot) } } });
       return saved;
     });
-    if (current.total === null || !current.total.equals(total)) void this.notifications.orderReady(order.id);
+    if (current.status === OrderStatus.PROCESSING) void this.notifications.orderReady(order.id);
     return order;
   }
 

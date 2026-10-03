@@ -89,7 +89,6 @@ export function OrderPage() {
       />
     );
   const data = order.data;
-  const item = data.items[0];
   const needsCustomer = data.status === "READY_FOR_PICKUP" && !data.customer;
   const canReturn = data.status === "READY_FOR_PICKUP" && !!data.customer;
 
@@ -161,7 +160,7 @@ export function OrderPage() {
         <div className="order-metrics">
           <div className="order-metric">
             <span>Khối lượng</span>
-            <strong>{data.weight ? `${data.weight} kg` : "Chưa cân"}</strong>
+            <strong>{data.weight && Number(data.weight) > 0 ? `${data.weight} kg` : "Không tính theo kg"}</strong>
           </div>
           <div className="order-metric amount">
             <span>{canReturn ? "Cần thanh toán" : "Thành tiền"}</span>
@@ -175,10 +174,20 @@ export function OrderPage() {
           <span>Nhận lúc</span>
           <strong>{new Date(data.createdAt).toLocaleString("vi-VN")}</strong>
         </div>
-        <div className="detail-row">
+        <div className="detail-row detail-row-stack">
           <span>Dịch vụ</span>
-          <strong>{item?.serviceName ?? "Chưa chọn"}</strong>
+          <div className="order-item-lines">
+            {data.items.length ? data.items.map((item) => (
+              <div className="order-item-line" key={item.id}>
+                <span>{item.serviceName} · {item.quantity} {item.unit === "KG" ? "kg" : item.unit === "PAIR" ? "đôi" : "món"}</span>
+                <strong><Money value={item.lineTotal} /></strong>
+                {item.unitPrice !== item.baseUnitPrice && <small>Giá bảng {Number(item.baseUnitPrice).toLocaleString("vi-VN")}đ · áp dụng {Number(item.unitPrice).toLocaleString("vi-VN")}đ</small>}
+              </div>
+            )) : <strong>Chưa chọn</strong>}
+          </div>
         </div>
+        <div className="detail-row"><span>Tạm tính</span><strong><Money value={data.subtotal} /></strong></div>
+        <div className="detail-row"><span>Giảm giá</span><strong><Money value={data.discount} /></strong></div>
         {canReturn && (
           <div className="detail-row loyalty-row">
             <span>Điểm sau khi trả đồ</span>
@@ -220,8 +229,7 @@ export function OrderPage() {
 
       <div className="order-actions">
         {data.status === "READY_FOR_PICKUP" &&
-          !data.payments.length &&
-          session.data?.role !== "STAFF" && (
+          !data.payments.length && (
             <Link to={`/orders/${data.code}/complete`}>
               <Button size="large" block>
                 SỬA CÂN

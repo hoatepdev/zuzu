@@ -13,11 +13,15 @@ const orders = new OrdersService(prismaService, printing, notifications as unkno
 const suffix = Date.now().toString();
 let userId: string;
 let serviceId: string;
+let itemServiceId: string;
+let pairServiceId: string;
 
 beforeAll(async () => {
   await prisma.storeSetting.upsert({ where: { key: 'LOYALTY_VND_PER_POINT' }, update: { value: '10000' }, create: { key: 'LOYALTY_VND_PER_POINT', value: '10000' } });
   userId = (await prisma.user.create({ data: { username: `test-${suffix}`, name: 'Test', role: Role.STAFF, passwordHash: 'unused' } })).id;
   serviceId = (await prisma.service.create({ data: { name: `Test service ${suffix}`, unit: ServiceUnit.KG, price: 15000 } })).id;
+  itemServiceId = (await prisma.service.create({ data: { name: `Test item ${suffix}`, unit: ServiceUnit.ITEM, price: 80000 } })).id;
+  pairServiceId = (await prisma.service.create({ data: { name: `Test pair ${suffix}`, unit: ServiceUnit.PAIR, price: 50000 } })).id;
   await prisma.storeSetting.upsert({ where: { key: 'LOYALTY_VND_PER_POINT' }, update: { value: '10000' }, create: { key: 'LOYALTY_VND_PER_POINT', value: '10000' } });
 });
 
@@ -26,10 +30,10 @@ afterAll(async () => {
   await prisma.payment.deleteMany({ where: { createdById: userId } });
   await prisma.loyaltyTransaction.deleteMany({ where: { customer: { phone: `09${suffix.slice(-8)}` } } });
   await prisma.printJob.deleteMany({ where: { order: { createdById: userId } } });
-  await prisma.orderItem.deleteMany({ where: { serviceId } });
+  await prisma.orderItem.deleteMany({ where: { serviceId: { in: [serviceId, itemServiceId, pairServiceId] } } });
   await prisma.order.deleteMany({ where: { createdById: userId } });
   await prisma.customer.deleteMany({ where: { phone: `09${suffix.slice(-8)}` } });
-  await prisma.service.delete({ where: { id: serviceId } });
+  await prisma.service.deleteMany({ where: { id: { in: [serviceId, itemServiceId, pairServiceId] } } });
   await prisma.user.delete({ where: { id: userId } });
   await prisma.$disconnect();
 });
@@ -44,10 +48,10 @@ it('runs unknown customer through attach, complete, payment, loyalty and audit',
   const attached = await orders.attachCustomer(created.id, { phone, name: 'Khách test' }, userId);
   expect(attached.customer?.phone).toBe(phone);
 
-  const ready = await orders.complete(created.id, { serviceId, quantity: 5.2 }, userId);
+  const ready = await orders.complete(created.id, { items: [{ serviceId, quantity: 5.2 }] }, userId);
   expect(ready.status).toBe(OrderStatus.READY_FOR_PICKUP);
   expect(ready.total?.toString()).toBe('78000');
-  expect(ready.items[0].unitPrice.toString()).toBe('15000');
+  expect(ready.items.find((item) => item.serviceId === serviceId)?.unitPrice.toString()).toBe('15000');
 
   const returned = await orders.returnOrder(created.id, { method: PaymentMethod.BANK_TRANSFER }, userId);
   expect(returned.status).toBe(OrderStatus.COMPLETED);
@@ -55,6 +59,29 @@ it('runs unknown customer through attach, complete, payment, loyalty and audit',
   expect(await prisma.loyaltyTransaction.findUnique({ where: { orderId: created.id } })).toMatchObject({ points: 7 });
   expect(await prisma.auditLog.count({ where: { entityId: created.id } })).toBe(4);
   await expect(orders.returnOrder(created.id, { method: PaymentMethod.CASH }, userId)).rejects.toThrow('Đơn chưa sẵn sàng để trả');
+});
+
+it('supports multiple services, editable prices, and KG-only weight', async () => {
+  const created = await orders.create({ customerUnknown: true }, userId);
+  const ready = await orders.complete(created.id, { items: [
+    { serviceId, quantity: 4.2 },
+    { serviceId: itemServiceId, quantity: 1, unitPrice: 80000 },
+    { serviceId: pairServiceId, quantity: 2 },
+  ], discount: 10000 }, userId, Role.MANAGER);
+  expect(ready.subtotal?.toString()).toBe('243000');
+  expect(ready.total?.toString()).toBe('233000');
+  expect(ready.weight?.toString()).toBe('4.2');
+  expect(ready.items).toHaveLength(3);
+  expect(ready.items.find((item) => item.serviceId === itemServiceId)?.baseUnitPrice.toString()).toBe('80000');
+  expect(ready.items.find((item) => item.serviceId === itemServiceId)?.lineTotal.toString()).toBe('80000');
+  const adjusted = await orders.complete(created.id, { items: ready.items.map((item) => ({ id: item.id, serviceId: item.serviceId, quantity: Number(item.quantity), unitPrice: item.serviceId === itemServiceId ? 70000 : Number(item.unitPrice) })) }, userId, Role.MANAGER);
+  const adjustedItem = adjusted.items.find((item) => item.serviceId === itemServiceId)!;
+  expect(adjusted.subtotal?.toString()).toBe('233000');
+  expect(adjustedItem.baseUnitPrice.toString()).toBe('80000');
+  expect(adjustedItem.unitPrice.toString()).toBe('70000');
+  const stale = await orders.get(created.id);
+  await orders.complete(created.id, { items: adjusted.items.map((item) => ({ id: item.id, serviceId: item.serviceId, quantity: Number(item.quantity) })) }, userId, Role.MANAGER);
+  await expect(orders.complete(created.id, { expectedUpdatedAt: stale.updatedAt.toISOString(), items: adjusted.items.map((item) => ({ id: item.id, serviceId: item.serviceId, quantity: Number(item.quantity) })) }, userId, Role.MANAGER)).rejects.toThrow('thiết bị khác');
 });
 
 it('queues a receipt job on create and a fresh job on reprint, with audit', async () => {

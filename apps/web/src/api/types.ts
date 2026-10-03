@@ -126,6 +126,7 @@ export type Order = {
   customerUnknown: boolean;
   customer?: Customer;
   createdAt: string;
+  updatedAt: string;
   readyAt?: string;
   completedAt?: string;
   weight?: string;
@@ -139,8 +140,10 @@ export type Order = {
     serviceName: string;
     unit: string;
     quantity: string;
+    baseUnitPrice: string;
     unitPrice: string;
     lineTotal: string;
+    priceAdjustmentReason?: string;
   }>;
   payments: Array<{ id: string; method: string; amount: string }>;
   notifications: Array<{ id: string; status: string; error?: string }>;

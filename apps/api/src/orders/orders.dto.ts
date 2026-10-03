@@ -1,6 +1,6 @@
 import { PaymentMethod, OrderStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsPhoneNumber, IsString, Max, Min, MinLength } from 'class-validator';
+import { IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, Max, Min, MinLength, ValidateNested } from 'class-validator';
 
 export class CreateOrderDto {
   @IsOptional() @IsPhoneNumber('VN') phone?: string;
@@ -8,10 +8,18 @@ export class CreateOrderDto {
   @IsOptional() @IsString() note?: string;
   @IsBoolean() customerUnknown!: boolean;
 }
+export class CompleteOrderItemDto {
+  @IsOptional() @IsString() id?: string;
+  @IsString() @IsNotEmpty() serviceId!: string;
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) quantity!: number;
+  @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 0 }) @Min(0) unitPrice?: number;
+  @IsOptional() @IsString() priceAdjustmentReason?: string | null;
+}
+
 export class CompleteOrderDto {
-  @IsString() serviceId!: string;
-  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) quantity!: number;
+  @IsArray() @ValidateNested({ each: true }) @Type(() => CompleteOrderItemDto) items!: CompleteOrderItemDto[];
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) discount?: number;
+  @IsOptional() @IsDateString() expectedUpdatedAt?: string;
 }
 export class AttachCustomerDto {
   @IsPhoneNumber('VN') phone!: string;
