@@ -1,0 +1,8 @@
+# Internal static server for a shared VPS where nginx already owns 80/443.
+# nginx proxies app.<domain> to 127.0.0.1:8080 (this container) and terminates TLS itself.
+:8080 {
+	root * /srv
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+}

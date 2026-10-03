@@ -1,0 +1,57 @@
+# Shared-VPS variant of docker-compose.prod.yml: the VPS already runs nginx on 80/443
+# (with certbot) for other sites. ZUZU keeps off the public ports:
+#   - API published on 127.0.0.1:3100 (nginx proxies api.<domain> to it)
+#   - web (caddy, deploy/Caddyfile.vps) on 127.0.0.1:8080 (nginx proxies app.<domain> to it)
+# Use: docker compose -f docker-compose.vps.yml --env-file .env.production up -d --build
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: zuzu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zuzu
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: zuzu
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zuzu -d zuzu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql://zuzu:${DB_PASSWORD}@db:5432/zuzu?schema=public
+      PORT: 3100
+    ports:
+      - "127.0.0.1:3100:3100"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    volumes:
+      - ./deploy/Caddyfile.vps:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  pgdata:
