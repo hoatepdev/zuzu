@@ -10,6 +10,7 @@ export type Customer = {
   id: string;
   phone: string;
   name?: string;
+  address?: string;
   note?: string;
   laundryPreference?: string;
   marketingOptIn: boolean;
@@ -118,6 +119,8 @@ export const EXPENSE_CATEGORIES = [
   "Khác",
 ];
 
+export type ReceivedService = { serviceId: string; serviceName: string };
+
 export type Order = {
   id: string;
   code: string;
@@ -125,6 +128,10 @@ export type Order = {
   note?: string;
   customerUnknown: boolean;
   customer?: Customer;
+  dueDate?: string;
+  duePeriod?: "MORNING" | "AFTERNOON";
+  deliveryAddress?: string;
+  receivedServices: ReceivedService[];
   createdAt: string;
   updatedAt: string;
   readyAt?: string;

@@ -113,6 +113,15 @@ export function buildReceipt(bill, opts = {}) {
   if (bill.customerName) section('Khách', bill.customerName);
   if (bill.phone) section('SĐT', maskPhone(bill.phone));
   if (bill.note) section('Lưu ý', bill.note);
+  const periodLabel = { MORNING: 'Sáng', AFTERNOON: 'Chiều' }[bill.duePeriod] ?? '';
+  if (bill.dueDate || periodLabel) section('Hẹn trả', [bill.dueDate && new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short' }).format(new Date(bill.dueDate)), periodLabel].filter(Boolean).join(' '));
+  if (bill.deliveryAddress) section('Giao đến', bill.deliveryAddress);
+  if (Array.isArray(bill.services) && bill.services.length) {
+    out(bytes('Dịch vụ dự kiến:\n')); say('Dịch vụ dự kiến:');
+    for (const service of bill.services) {
+      for (const line of wrap(enc(`□ ${service}`), width)) { out(bytes(line)); out(Buffer.from('\n')); say(line); }
+    }
+  }
 
   feed(1); say('');
   align(1);

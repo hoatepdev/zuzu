@@ -7,7 +7,11 @@ const bill = {
   createdAt: '2026-10-02T07:45:00.000Z',
   customerName: 'Nguyễn Lan',
   phone: '0987654321',
-  note: 'Ít thơm'
+  note: 'Ít thơm',
+  dueDate: '2026-10-05T00:00:00.000Z',
+  duePeriod: 'MORNING',
+  deliveryAddress: '12 Nguyễn Huệ',
+  services: ['Giặt hấp', 'Sấy khô']
 };
 
 test('maskPhone hides middle digits', () => {
@@ -35,6 +39,13 @@ test('bill contains title, code, masked phone, VN date, QR and cut', () => {
   assert.ok(text.includes('02/10/2026 14:45'), 'UTC+7 date');
   assert.ok(text.includes('Nguyễn Lan'));
   assert.ok(text.includes('Ít thơm'));
+  assert.ok(text.includes('Hẹn trả:'));
+  assert.ok(text.includes('5/10/26 Sáng'));
+  assert.ok(text.includes('Giao đến:'));
+  assert.ok(text.includes('12 Nguyễn Huệ'));
+  assert.ok(text.includes('Dịch vụ dự kiến:'));
+  assert.ok(text.includes('□ Giặt hấp'));
+  assert.ok(text.includes('□ Sấy khô'));
   assert.ok(text.includes('ZUZU'));
   assert.ok(text.includes('0876 833 068'));
   assert.ok(hex.includes('1d286b'), 'printer-native QR command');
@@ -42,13 +53,20 @@ test('bill contains title, code, masked phone, VN date, QR and cut', () => {
   assert.ok(hex.endsWith('1d5600'), 'auto-cut at the end');
 });
 
-test('bill omits missing optional sections', () => {
+test('bill rejects or safely omits invalid optional sections', () => {
   const { text } = buildReceipt({ code: 'ZU-0001' });
   assert.ok(!text.includes('Ngày nhận:'));
+  assert.ok(!text.includes('Hẹn trả:'));
   assert.ok(!text.includes('Khách:'));
   assert.ok(!text.includes('SĐT:'));
   assert.ok(!text.includes('Lưu ý:'));
   assert.ok(text.includes('ZU-0001'));
+});
+
+test('bill prints a period without a date', () => {
+  const { text } = buildReceipt({ code: 'ZU-0126', duePeriod: 'AFTERNOON' });
+  assert.ok(text.includes('Hẹn trả:'));
+  assert.ok(text.includes('Chiều'));
 });
 
 test('bill wraps long Vietnamese content to 48 columns', () => {

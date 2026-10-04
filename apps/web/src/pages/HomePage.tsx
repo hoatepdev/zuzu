@@ -6,7 +6,7 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Spin } from "antd";
+import { Alert, Button, Spin } from "antd";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -85,82 +85,92 @@ export function HomePage() {
       )}
 
       <div className="home-workspace">
-      <div className="home-primary">
-      <div className="home-hero">
-        <Link to="/receive" className="op-action op-receive">
-          <span className="op-icon" aria-hidden="true">
-            <PlusOutlined />
-          </span>
-          <span className="op-copy">
-            <b>Nhận đồ</b>
-            <small>Tạo đơn cho khách trong vài giây</small>
-          </span>
-          <span className="op-arrow" aria-hidden="true">
-            <RightOutlined />
-          </span>
-        </Link>
-        <Link to="/scan" className="op-action op-scan">
-          <span className="op-icon" aria-hidden="true">
-            <CameraOutlined />
-          </span>
-          <span className="op-copy">
-            <b>Quét QR</b>
-            <small>Tra đơn bằng mã trên bill</small>
-          </span>
-          <span className="op-arrow" aria-hidden="true">
-            <RightOutlined />
-          </span>
-        </Link>
-      </div>
+        <div className="home-primary">
+          <section className="home-hero" aria-labelledby="home-actions-title">
+            <h2 id="home-actions-title" className="sr-only">
+              Tác vụ chính
+            </h2>
+            <Link to="/receive" className="op-action op-receive">
+              <span className="op-icon" aria-hidden="true">
+                <PlusOutlined />
+              </span>
+              <span className="op-copy">
+                <b>Nhận đồ</b>
+                <small>Tạo đơn cho khách trong vài giây</small>
+              </span>
+              <span className="op-arrow" aria-hidden="true">
+                <RightOutlined />
+              </span>
+            </Link>
+            <Link to="/scan" className="op-action op-scan">
+              <span className="op-icon" aria-hidden="true">
+                <CameraOutlined />
+              </span>
+              <span className="op-copy">
+                <b>Quét QR</b>
+                <small>Tra đơn bằng mã trên bill</small>
+              </span>
+              <span className="op-arrow" aria-hidden="true">
+                <RightOutlined />
+              </span>
+            </Link>
+          </section>
 
-      <div
-        className="home-status"
-        role="status"
-        aria-label="Tình trạng đơn hàng"
-      >
-        <Link to="/orders?status=PROCESSING">
-          <strong>{summary.data?.processing ?? 0}</strong> đang xử lý
-        </Link>
-        <span className="dot-sep" aria-hidden="true">
-          ·
-        </span>
-        <Link to="/orders?status=READY_FOR_PICKUP" className="warn">
-          <strong>{summary.data?.ready ?? 0}</strong> chờ khách lấy
-        </Link>
-        <span className="dot-sep" aria-hidden="true">
-          ·
-        </span>
-        <Link to="/orders" className="attention">
-          <strong>{summary.data?.attention ?? 0}</strong> cần xử lý
-        </Link>
-      </div>
-      </div>
-
-      <section className="home-recent" aria-labelledby="recent-orders-title">
-        <div className="home-recent-head">
-          <h2 id="recent-orders-title">Đơn gần đây</h2>
-          <Link to="/orders">Xem tất cả</Link>
+          <section
+            className="home-status"
+            aria-labelledby="home-status-title"
+          >
+            <h2 id="home-status-title" className="sr-only">
+              Tình trạng đơn hàng
+            </h2>
+            <Link to="/orders?status=PROCESSING">
+              <strong>{summary.data?.processing ?? 0}</strong>
+              <span>đang xử lý</span>
+            </Link>
+            <Link to="/orders?status=READY_FOR_PICKUP" className="warn">
+              <strong>{summary.data?.ready ?? 0}</strong>
+              <span>chờ khách lấy</span>
+            </Link>
+            <Link to="/orders" className="attention">
+              <strong>{summary.data?.attention ?? 0}</strong>
+              <span>cần chú ý</span>
+            </Link>
+          </section>
         </div>
-        {recent.isLoading ? (
-          <div className="center">
-            <Spin />
-          </div>
-        ) : recent.error ? (
-          <EmptyState description={recent.error.message} />
-        ) : recent.data?.length ? (
-          <div className="order-list">
-            {recent.data.slice(0, 4).map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState description="Chưa có đơn nào trong ngày" />
-        )}
 
-        <Link to="/expenses/new" className="home-utility">
-          <DollarOutlined /> Chi tiền
-        </Link>
-      </section>
+        <section className="home-recent" aria-labelledby="recent-orders-title">
+          <div className="home-recent-head">
+            <h2 id="recent-orders-title">Đơn gần đây</h2>
+            <Link to="/orders">Xem tất cả</Link>
+          </div>
+          {recent.isLoading ? (
+            <div className="home-state" role="status" aria-live="polite">
+              <Spin size="small" />
+              <span>Đang tải đơn gần đây…</span>
+            </div>
+          ) : recent.error ? (
+            <EmptyState
+              description={recent.error.message || "Không tải được đơn gần đây"}
+              action={
+                <Button type="link" onClick={() => recent.refetch()}>
+                  Thử lại
+                </Button>
+              }
+            />
+          ) : recent.data?.length ? (
+            <div className="order-list">
+              {recent.data.slice(0, 4).map((order) => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState description="Chưa có đơn nào trong ngày" />
+          )}
+
+          <Link to="/expenses/new" className="home-utility">
+            <DollarOutlined /> Chi tiền
+          </Link>
+        </section>
       </div>
     </div>
   );

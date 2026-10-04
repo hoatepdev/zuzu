@@ -1,11 +1,17 @@
-import { PaymentMethod, OrderStatus } from '@prisma/client';
+import { DuePeriod, PaymentMethod, OrderStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, Max, Min, MinLength, ValidateNested } from 'class-validator';
+import { ArrayUnique, IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
 
 export class CreateOrderDto {
   @IsOptional() @IsPhoneNumber('VN') phone?: string;
-  @IsOptional() @IsString() customerName?: string;
-  @IsOptional() @IsString() note?: string;
+  @IsOptional() @IsString() @MaxLength(200) customerName?: string;
+  @IsOptional() @IsString() @MaxLength(500) customerAddress?: string;
+  @IsOptional() @IsString() @MaxLength(500) note?: string;
+  @IsOptional() @IsDateString() dueDate?: string;
+  @IsOptional() @IsEnum(DuePeriod) duePeriod?: DuePeriod;
+  @IsOptional() @IsString() @MaxLength(500) deliveryAddress?: string;
+  @IsOptional() @IsArray() @ArrayUnique() @IsString({ each: true }) serviceIds?: string[];
+  @IsOptional() @IsString() customerId?: string;
   @IsBoolean() customerUnknown!: boolean;
 }
 export class CompleteOrderItemDto {

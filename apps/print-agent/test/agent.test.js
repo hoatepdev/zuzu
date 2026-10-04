@@ -60,6 +60,9 @@ test('/print rejects invalid payloads', async () => {
     assert.equal((await post(base, {})).status, 400);
     assert.equal((await post(base, { code: 'ZU-0001', createdAt: 'not-a-date' })).status, 400);
     assert.equal((await post(base, { code: 'ZU-0001', phone: 123 })).status, 400);
+    assert.equal((await post(base, { code: 'ZU-0001', duePeriod: 'EVENING' })).status, 400);
+    assert.equal((await post(base, { code: 'ZU-0001', services: 'Giặt hấp' })).status, 400);
+    assert.equal((await post(base, { code: 'ZU-0001', services: ['x'.repeat(201)] })).status, 400);
     const res = await fetch(`${base}/print`, { method: 'POST', body: 'not json' });
     assert.equal(res.status, 400);
   });

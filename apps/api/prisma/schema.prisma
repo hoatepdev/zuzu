@@ -26,6 +26,11 @@ enum ServiceUnit {
   PAIR
 }
 
+enum DuePeriod {
+  MORNING
+  AFTERNOON
+}
+
 enum PaymentMethod {
   CASH
   BANK_TRANSFER
@@ -72,6 +77,7 @@ model Customer {
   id                String               @id @default(cuid())
   phone             String               @unique
   name              String?
+  address           String?
   note              String?
   laundryPreference String?
   marketingOptIn    Boolean              @default(false)
@@ -97,6 +103,10 @@ model Order {
   customer        Customer?            @relation(fields: [customerId], references: [id])
   customerUnknown Boolean              @default(false)
   note            String?
+  dueDate        DateTime?
+  duePeriod      DuePeriod?
+  deliveryAddress String?
+  receivedServices Json                @default("[]")
   status          OrderStatus          @default(PROCESSING)
   weight          Decimal?             @db.Decimal(10, 2)
   subtotal        Decimal?             @db.Decimal(14, 0)

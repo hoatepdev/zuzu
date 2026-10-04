@@ -1,6 +1,9 @@
 import { OrderStatus, PaymentMethod, PrismaClient, Role, ServiceUnit } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { CustomersService } from '../src/customers/customers.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
+import { CreateOrderDto } from '../src/orders/orders.dto';
 import { OrdersService } from '../src/orders/orders.service';
 import { PrintingService } from '../src/printing/printing.service';
 import { PrismaService } from '../src/prisma.service';
@@ -18,6 +21,7 @@ let managerId: string;
 let serviceId: string;
 let customerId: string;
 let customer2Id: string;
+let receiveCustomerId: string;
 const orderIds: string[] = [];
 
 beforeAll(async () => {
@@ -28,13 +32,14 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.auditLog.deleteMany({ where: { userId: managerId } });
   await prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } });
-  await prisma.loyaltyTransaction.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { customerId: { in: [customerId, customer2Id].filter(Boolean) } }] } });
+  await prisma.loyaltyTransaction.deleteMany({ where: { OR: [{ orderId: { in: orderIds } }, { customerId: { in: [customerId, customer2Id, receiveCustomerId].filter(Boolean) } }] } });
   await prisma.notification.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.printJob.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
   await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
   if (customerId) await prisma.customer.delete({ where: { id: customerId } });
   if (customer2Id) await prisma.customer.delete({ where: { id: customer2Id } });
+  if (receiveCustomerId) await prisma.customer.delete({ where: { id: receiveCustomerId } });
   await prisma.service.delete({ where: { id: serviceId } });
   await prisma.user.delete({ where: { id: managerId } });
   await prisma.$disconnect();
@@ -62,11 +67,61 @@ it('preserves customer names and service snapshots while exposing CRM history', 
   expect((await services.active()).some((service) => service.id === serviceId)).toBe(false);
   const found = await customers.search(phone.replace(/(\d{2})(\d+)/, '$1 $2'));
   expect(found[0].id).toBe(customerId);
+  const prefixMatches = await customers.search(phone.slice(0, 4), true);
+  expect(prefixMatches.some((customer) => customer.id === customerId)).toBe(true);
   const detail = await customers.get(customerId);
   expect(detail.orders).toHaveLength(2);
   expect(detail.loyalty[0].points).toBe(3);
   const updated = await customers.update(customerId, { note: 'Ưu tiên ít thơm', marketingOptIn: true }, managerId);
   expect(updated.note).toBe('Ưu tiên ít thơm');
+});
+
+it('persists receive metadata without priced items and preserves it on reprint', async () => {
+  await services.update(serviceId, { active: true }, managerId);
+  const phone = `08${suffix.slice(-8)}`;
+  const order = await orders.create({
+    customerUnknown: false,
+    phone,
+    customerName: 'Khách nhận đồ',
+    customerAddress: '12 Nguyễn Huệ',
+    dueDate: '2026-10-05',
+    duePeriod: 'MORNING',
+    deliveryAddress: '34 Lê Lợi',
+    serviceIds: [serviceId],
+  }, managerId);
+  orderIds.push(order.id);
+  receiveCustomerId = order.customerId!;
+  expect(order.customer?.address).toBe('12 Nguyễn Huệ');
+  expect(order.dueDate?.toISOString()).toBe('2026-10-04T17:00:00.000Z');
+  expect(order.duePeriod).toBe('MORNING');
+  expect(order.deliveryAddress).toBe('34 Lê Lợi');
+  expect(order.receivedServices).toEqual([{ serviceId, serviceName: `Giặt test ${suffix}` }]);
+  expect(order.items).toHaveLength(0);
+  const initial = await prisma.printJob.findFirstOrThrow({ where: { orderId: order.id } });
+  expect(initial.payload).toMatchObject({ dueDate: '2026-10-04T17:00:00.000Z', duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
+  await orders.reprint(order.id, managerId);
+  const jobs = await prisma.printJob.findMany({ where: { orderId: order.id }, orderBy: { createdAt: 'asc' } });
+  expect(jobs).toHaveLength(2);
+  expect(jobs[1].payload).toMatchObject({ dueDate: '2026-10-04T17:00:00.000Z', duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
+});
+
+it('rejects invalid receive dates and inactive services', async () => {
+  await expect(orders.create({ customerUnknown: true, dueDate: '2026-02-30' }, managerId)).rejects.toThrow('Ngày hẹn trả không hợp lệ');
+  await services.update(serviceId, { active: false }, managerId);
+  await expect(orders.create({ customerUnknown: true, serviceIds: [serviceId] }, managerId)).rejects.toThrow('Dịch vụ không còn hoạt động');
+  await services.update(serviceId, { active: true }, managerId);
+});
+
+it('persists an optional period without a date', async () => {
+  const order = await orders.create({ customerUnknown: true, duePeriod: 'AFTERNOON' }, managerId);
+  orderIds.push(order.id);
+  expect(order.dueDate).toBeNull();
+  expect(order.duePeriod).toBe('AFTERNOON');
+});
+
+it('rejects an invalid due period at the API boundary', async () => {
+  const errors = await validate(plainToInstance(CreateOrderDto, { customerUnknown: true, duePeriod: 'EVENING' }));
+  expect(errors.some((error) => error.property === 'duePeriod')).toBe(true);
 });
 
 it('adjusts weighing with discount before payment and applies manual loyalty', async () => {

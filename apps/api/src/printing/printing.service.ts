@@ -3,7 +3,17 @@ import { PrintJobStatus, PrintJobType, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma.service';
 
-export type ReceiptPayload = { code: string; createdAt: string; customerName?: string; phone?: string; note?: string };
+export type ReceiptPayload = {
+  code: string;
+  createdAt: string;
+  customerName?: string;
+  phone?: string;
+  note?: string;
+  dueDate?: string;
+  duePeriod?: 'MORNING' | 'AFTERNOON';
+  deliveryAddress?: string;
+  services?: string[];
+};
 
 const MAX_ATTEMPTS = 3;
 

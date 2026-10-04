@@ -8,6 +8,14 @@ import { AttachCustomerDto, CompleteOrderDto, CreateOrderDto, ListOrdersDto, Lis
 import { calculateLineTotal, calculatePoints } from './money';
 
 const details = { customer: true, createdBy: { select: { id: true, name: true } }, returnedBy: { select: { id: true, name: true } }, items: true, payments: true, notifications: { orderBy: { createdAt: 'desc' as const } }, printJobs: { select: { id: true, status: true, attempts: true, lastError: true, createdAt: true, printedAt: true, failedAt: true }, orderBy: { createdAt: 'desc' as const } } };
+const localDate = (value?: string) => {
+  if (!value) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date('invalid');
+  const [year, month, day] = value.split('-').map(Number);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) return new Date('invalid');
+  return new Date(`${value}T00:00:00+07:00`);
+};
 const normalizePhone = (phone: string) => phone.replace(/\s/g, '');
 
 @Injectable()
@@ -20,16 +28,27 @@ export class OrdersService {
     if (!dto.customerUnknown && !dto.phone) throw new BadRequestException('Vui lòng nhập số điện thoại');
     try {
       return await this.prisma.$transaction(async (tx) => {
-        const customer = dto.customerUnknown ? null : await tx.customer.upsert({
-          where: { phone: normalizePhone(dto.phone!) },
-          update: {},
-          create: { phone: normalizePhone(dto.phone!), name: dto.customerName }
-        });
-        const sequence = await tx.order.create({ data: { code: `PENDING-${crypto.randomUUID()}`, customerId: customer?.id, customerUnknown: dto.customerUnknown, note: dto.note, createdById: userId } });
+        const serviceIds = [...new Set(dto.serviceIds ?? [])];
+        const services = serviceIds.length
+          ? await tx.service.findMany({ where: { id: { in: serviceIds }, active: true }, select: { id: true, name: true } })
+          : [];
+        if (services.length !== serviceIds.length) throw new BadRequestException('Dịch vụ không còn hoạt động');
+        const receivedServices = serviceIds.map((id) => ({ serviceId: id, serviceName: services.find((service) => service.id === id)!.name }));
+        const customer = dto.customerUnknown ? null : dto.customerId
+          ? await tx.customer.findUnique({ where: { id: dto.customerId } })
+          : await tx.customer.upsert({
+            where: { phone: normalizePhone(dto.phone!) },
+            update: {},
+            create: { phone: normalizePhone(dto.phone!), name: dto.customerName, address: dto.customerAddress }
+          });
+        if (!dto.customerUnknown && !customer) throw new BadRequestException('Không tìm thấy khách hàng');
+        const dueDate = localDate(dto.dueDate);
+        if (dueDate && Number.isNaN(dueDate.getTime())) throw new BadRequestException('Ngày hẹn trả không hợp lệ');
+        const sequence = await tx.order.create({ data: { code: `PENDING-${crypto.randomUUID()}`, customerId: customer?.id, customerUnknown: dto.customerUnknown, note: dto.note, dueDate, duePeriod: dto.duePeriod, deliveryAddress: dto.deliveryAddress, receivedServices, createdById: userId } });
         const code = `ZU-${String(sequence.sequence).padStart(4, '0')}`;
         const saved = await tx.order.update({ where: { id: sequence.id }, data: { code } });
-        await this.printing.enqueue(tx, saved.id, { code, createdAt: saved.createdAt.toISOString(), customerName: customer?.name ?? undefined, phone: customer?.phone, note: saved.note ?? undefined });
-        await tx.auditLog.create({ data: { userId, action: 'ORDER_CREATED', entityType: 'ORDER', entityId: saved.id, after: { code, status: saved.status, customerId: saved.customerId, customerUnknown: saved.customerUnknown } } });
+        await this.printing.enqueue(tx, saved.id, { code, createdAt: saved.createdAt.toISOString(), customerName: customer?.name ?? undefined, phone: customer?.phone, note: saved.note ?? undefined, dueDate: saved.dueDate?.toISOString(), duePeriod: saved.duePeriod ?? undefined, deliveryAddress: saved.deliveryAddress ?? undefined, services: receivedServices.map((service) => service.serviceName) });
+        await tx.auditLog.create({ data: { userId, action: 'ORDER_CREATED', entityType: 'ORDER', entityId: saved.id, after: { code, status: saved.status, customerId: saved.customerId, customerUnknown: saved.customerUnknown, dueDate: saved.dueDate?.toISOString(), duePeriod: saved.duePeriod, deliveryAddress: saved.deliveryAddress, receivedServices } } });
         return tx.order.findUniqueOrThrow({ where: { id: saved.id }, include: details });
       });
     } catch (error) {
@@ -208,8 +227,9 @@ export class OrdersService {
 
   async reprint(idOrCode: string, userId: string) {
     const order = await this.get(idOrCode);
+    const receivedServices = Array.isArray(order.receivedServices) ? order.receivedServices as Array<{ serviceName?: string }> : [];
     const job = await this.prisma.$transaction(async (tx) => {
-      const queued = await this.printing.enqueue(tx, order.id, { code: order.code, createdAt: order.createdAt.toISOString(), customerName: order.customer?.name ?? undefined, phone: order.customer?.phone, note: order.note ?? undefined });
+      const queued = await this.printing.enqueue(tx, order.id, { code: order.code, createdAt: order.createdAt.toISOString(), customerName: order.customer?.name ?? undefined, phone: order.customer?.phone, note: order.note ?? undefined, dueDate: order.dueDate?.toISOString(), duePeriod: order.duePeriod ?? undefined, deliveryAddress: order.deliveryAddress ?? undefined, services: receivedServices.flatMap((service) => service.serviceName ? [service.serviceName] : []) });
       await tx.auditLog.create({ data: { userId, action: 'ORDER_REPRINTED', entityType: 'ORDER', entityId: order.id, after: { code: order.code, printJobId: queued.id } } });
       return queued;
     });

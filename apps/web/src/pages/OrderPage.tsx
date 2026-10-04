@@ -174,6 +174,8 @@ export function OrderPage() {
           <span>Nhận lúc</span>
           <strong>{new Date(data.createdAt).toLocaleString("vi-VN")}</strong>
         </div>
+        {(data.dueDate || data.duePeriod) && <div className="detail-row"><span>Hẹn trả</span><strong>{[data.dueDate && new Date(data.dueDate).toLocaleDateString("vi-VN"), data.duePeriod === "MORNING" ? "Sáng" : data.duePeriod === "AFTERNOON" ? "Chiều" : ""].filter(Boolean).join(" · ")}</strong></div>}
+        {data.deliveryAddress && <div className="detail-row detail-row-stack"><span>Giao đến</span><strong>{data.deliveryAddress}</strong></div>}
         <div className="detail-row detail-row-stack">
           <span>Dịch vụ</span>
           <div className="order-item-lines">
@@ -183,7 +185,7 @@ export function OrderPage() {
                 <strong><Money value={item.lineTotal} /></strong>
                 {item.unitPrice !== item.baseUnitPrice && <small>Giá bảng {Number(item.baseUnitPrice).toLocaleString("vi-VN")}đ · áp dụng {Number(item.unitPrice).toLocaleString("vi-VN")}đ</small>}
               </div>
-            )) : <strong>Chưa chọn</strong>}
+            )) : data.receivedServices.length ? data.receivedServices.map((service) => <div className="order-item-line" key={service.serviceId}><span>□ {service.serviceName}</span><small>Chưa cân / chưa tính giá</small></div>) : <strong>Chưa chọn</strong>}
           </div>
         </div>
         <div className="detail-row"><span>Tạm tính</span><strong><Money value={data.subtotal} /></strong></div>

@@ -11,9 +11,11 @@ export function validate(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return 'Dữ liệu không hợp lệ';
   if (typeof payload.code !== 'string' || !payload.code.trim() || payload.code.length > 64) return 'Thiếu hoặc sai mã đơn';
   if (payload.createdAt !== undefined && Number.isNaN(new Date(payload.createdAt).getTime())) return 'Ngày nhận không hợp lệ';
-  for (const [key, max] of [['customerName', 200], ['phone', 32], ['note', 500]]) {
+  for (const [key, max] of [['customerName', 200], ['phone', 32], ['note', 500], ['dueDate', 40], ['deliveryAddress', 500]]) {
     if (payload[key] !== undefined && (typeof payload[key] !== 'string' || payload[key].length > max)) return `${key} không hợp lệ`;
   }
+  if (payload.duePeriod !== undefined && !['MORNING', 'AFTERNOON'].includes(payload.duePeriod)) return 'duePeriod không hợp lệ';
+  if (payload.services !== undefined && (!Array.isArray(payload.services) || payload.services.length > 30 || payload.services.some((service) => typeof service !== 'string' || service.length > 200))) return 'services không hợp lệ';
   return null;
 }
 
