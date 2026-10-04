@@ -1,7 +1,107 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App as AntApp, Button, Form, Input, InputNumber, Modal, Select, Switch, Table, Tag } from 'antd';
-import { useState } from 'react';
-import { api } from '../api/client';
-import { Service } from '../api/types';
-import { Money, PageHeader } from '../components/common';
-export function ServicesPage() { const { message } = AntApp.useApp(); const qc = useQueryClient(); const [editing, setEditing] = useState<Partial<Service>>(); const [form] = Form.useForm(); const query = useQuery({ queryKey: ['services','all'], queryFn: () => api<Service[]>('/services/all') }); const save = useMutation({ mutationFn: (values: Partial<Service>) => editing?.id ? api<Service>(`/services/${editing.id}`, { method: 'PATCH', body: JSON.stringify(values) }) : api<Service>('/services', { method: 'POST', body: JSON.stringify(values) }), onSuccess: () => { setEditing(undefined); void qc.invalidateQueries({ queryKey: ['services'] }); message.success('Đã lưu bảng giá'); } }); const edit = (service?: Service) => { setEditing(service ?? {}); form.setFieldsValue(service ?? { unit: 'KG', active: true }); }; return <><PageHeader sub="Dịch vụ và đơn giá" extra={<Button type="primary" onClick={() => edit()}>+ DỊCH VỤ</Button>}>Bảng giá</PageHeader><Table rowKey="id" loading={query.isLoading} dataSource={query.data} pagination={false} columns={[{ title:'Tên',dataIndex:'name' },{ title:'Đơn vị',dataIndex:'unit',render:(v:string)=>v==='KG'?'Kg':v==='PAIR'?'Đôi':'Món' },{ title:'Giá',dataIndex:'price',render:(v:string)=><Money value={v}/> },{ title:'Trạng thái',render:(_,r)=><Tag color={r.active?'green':'default'}>{r.active?'Đang dùng':'Đã tắt'}</Tag> },{ title:'',render:(_,r)=><Button onClick={()=>edit(r)}>Sửa</Button> }]}/><Modal title={editing?.id?'Sửa dịch vụ':'Thêm dịch vụ'} open={!!editing} onCancel={()=>setEditing(undefined)} onOk={()=>form.submit()} confirmLoading={save.isPending}><Form form={form} layout="vertical" onFinish={(values)=>save.mutate(values)}><Form.Item name="name" label="Tên" rules={[{required:true}]}><Input/></Form.Item><Form.Item name="unit" label="Đơn vị" rules={[{required:true}]}><Select options={['KG','ITEM','PAIR'].map(value=>({value,label:value}))}/></Form.Item><Form.Item name="price" label="Giá" rules={[{required:true}]}><InputNumber min={1} precision={0} addonAfter="đ" style={{width:'100%'}}/></Form.Item>{editing?.id&&<Form.Item name="active" label="Đang sử dụng" valuePropName="checked"><Switch/></Form.Item>}</Form></Modal></>; }
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  App as AntApp,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Switch,
+  Table,
+  Tag,
+} from "antd";
+import { useState } from "react";
+import { api } from "../api/client";
+import { Service } from "../api/types";
+import { Money, PageHeader } from "../components/common";
+
+export function ServicesPage() {
+  const { message } = AntApp.useApp();
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<Partial<Service>>();
+  const [form] = Form.useForm();
+  const query = useQuery({
+    queryKey: ["services", "all"],
+    queryFn: () => api<Service[]>("/services/all"),
+  });
+  const save = useMutation({
+    mutationFn: (values: Partial<Service>) =>
+      editing?.id
+        ? api<Service>(`/services/${editing.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(values),
+          })
+        : api<Service>("/services", {
+            method: "POST",
+            body: JSON.stringify(values),
+          }),
+    onSuccess: () => {
+      setEditing(undefined);
+      void qc.invalidateQueries({ queryKey: ["services"] });
+      message.success("Đã lưu bảng giá");
+    },
+  });
+  const edit = (service?: Service) => {
+    setEditing(service ?? {});
+    form.setFieldsValue(
+      service ?? { stt: (query.data?.length ?? 0) + 1, unit: "KG", active: true, isDefault: false },
+    );
+  };
+
+  return (
+    <>
+      <PageHeader
+        sub="Dịch vụ và đơn giá"
+        extra={<Button type="primary" onClick={() => edit()}>+ DỊCH VỤ</Button>}
+      >
+        Bảng giá
+      </PageHeader>
+      <Table
+        rowKey="id"
+        loading={query.isLoading}
+        dataSource={query.data}
+        pagination={false}
+        columns={[
+          { title: "STT", dataIndex: "stt", width: 80 },
+          { title: "Tên", dataIndex: "name" },
+          { title: "Đơn vị", dataIndex: "unit", render: (v: string) => v === "KG" ? "Kg" : v === "PAIR" ? "Đôi" : "Món" },
+          { title: "Giá", dataIndex: "price", render: (v: string) => <Money value={v} /> },
+          { title: "Mặc định chọn", dataIndex: "isDefault", render: (value: boolean) => value ? <Tag color="green">Mặc định</Tag> : null },
+          { title: "Trạng thái", render: (_, r) => <Tag color={r.active ? "green" : "default"}>{r.active ? "Đang dùng" : "Đã tắt"}</Tag> },
+          { title: "", render: (_, r) => <Button onClick={() => edit(r)}>Sửa</Button> },
+        ]}
+      />
+      <Modal
+        title={editing?.id ? "Sửa dịch vụ" : "Thêm dịch vụ"}
+        open={!!editing}
+        onCancel={() => setEditing(undefined)}
+        onOk={() => form.submit()}
+        confirmLoading={save.isPending}
+      >
+        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)}>
+          <Form.Item name="stt" label="STT" rules={[{ required: true }]}>
+            <InputNumber min={1} precision={0} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="name" label="Tên" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
+            <Select options={["KG", "ITEM", "PAIR"].map((value) => ({ value, label: value }))} />
+          </Form.Item>
+          <Form.Item name="price" label="Giá" rules={[{ required: true }]}>
+            <InputNumber min={1} precision={0} addonAfter="đ" style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="isDefault" label="Mặc định chọn" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          {editing?.id && (
+            <Form.Item name="active" label="Đang sử dụng" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          )}
+        </Form>
+      </Modal>
+    </>
+  );
+}

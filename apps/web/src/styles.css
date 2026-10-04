@@ -256,7 +256,7 @@ h3 {
   max-width: 1440px;
   margin: 0 auto;
   flex: 1;
-  padding: 22px 16px calc(92px + env(safe-area-inset-bottom));
+  padding: 22px 16px calc(64px + env(safe-area-inset-bottom));
   overflow-x: clip;
 }
 
@@ -1016,8 +1016,8 @@ h3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .staff-status-filter .ant-radio-button-wrapper {
-  min-height: 48px;
-  line-height: 46px !important;
+  min-height: 54px;
+  line-height: 52px !important;
   padding-inline: 7px;
   font-size: 13.5px;
 }
@@ -1506,10 +1506,10 @@ h3 {
 }
 @keyframes scan-sweep {
   from {
-    transform: translateY(0);
+    top: 8%;
   }
   to {
-    transform: translateY(calc(min(72vw, 286px, 44vh) - 100%));
+    top: calc(92% - 2.5px);
   }
 }
 .scan-hint {
@@ -1559,10 +1559,23 @@ h3 {
 .manual-code-form .ant-form-item {
   margin: 0;
 }
+.manual-code-form .ant-input {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.manual-code-form .ant-input::placeholder {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
 .manual-code-form .ant-btn {
   min-width: 108px;
   min-height: 54px;
-  font-weight: 650;
+  font-weight: 750;
+  letter-spacing: 0.02em;
 }
 
 .divider {
@@ -1928,10 +1941,8 @@ h3 {
 .ant-input {
   font-size: 16px;
 }
-.ant-input-lg,
-.ant-input-number-lg,
-.ant-select-lg .ant-select-selector {
-  min-height: 54px !important;
+.ant-picker-dropdown {
+  z-index: 1000;
 }
 .ant-form-item-label > label {
   font-weight: 650;
@@ -2277,5 +2288,9 @@ h3 {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+  .scan-line {
+    animation-duration: 2.3s !important;
+    animation-iteration-count: infinite !important;
   }
 }

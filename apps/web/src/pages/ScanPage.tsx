@@ -30,7 +30,7 @@ export function ScanPage() {
               prefix={<SearchOutlined />}
             />
           </Form.Item>
-          <Button htmlType="submit" size="large">
+          <Button htmlType="submit" size="large" type="primary">
             TÌM ĐƠN
           </Button>
         </Form>

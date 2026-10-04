@@ -1,6 +1,9 @@
 import "@ant-design/v5-patch-for-react-19";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
+import viVN from "antd/locale/vi_VN";
+import dayjs from "dayjs";
+import "dayjs/locale/vi";
 import "antd/dist/reset.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -8,12 +11,15 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import "./styles.css";
 
+dayjs.locale("vi");
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000 } },
 });
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ConfigProvider
+      locale={viVN}
       theme={{
         token: {
           colorPrimary: "#0E7C66",

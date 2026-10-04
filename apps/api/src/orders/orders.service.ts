@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrintingService } from '../printing/printing.service';
 import { SettingsService } from '../settings/settings.service';
+import { vietnamTodayBounds } from '../dashboard/dashboard.service';
 import { AttachCustomerDto, CompleteOrderDto, CreateOrderDto, ListOrdersDto, ListOrdersPageDto, ReturnOrderDto } from './orders.dto';
 import { calculateLineTotal, calculatePoints } from './money';
 
@@ -17,6 +18,13 @@ const localDate = (value?: string) => {
   return new Date(`${value}T00:00:00+07:00`);
 };
 const normalizePhone = (phone: string) => phone.replace(/\s/g, '');
+const normalizeName = (value: string) => value
+  .normalize('NFD')
+  .replace(/[̀-ͯ]/g, '')
+  .replace(/đ/gi, 'd')
+  .toLowerCase()
+  .trim()
+  .replace(/\s+/g, ' ');
 
 @Injectable()
 export class OrdersService {
@@ -38,12 +46,13 @@ export class OrdersService {
           ? await tx.customer.findUnique({ where: { id: dto.customerId } })
           : await tx.customer.upsert({
             where: { phone: normalizePhone(dto.phone!) },
-            update: {},
-            create: { phone: normalizePhone(dto.phone!), name: dto.customerName, address: dto.customerAddress }
+            update: dto.customerName ? { name: dto.customerName, nameNormalized: normalizeName(dto.customerName), address: dto.customerAddress } : {},
+            create: { phone: normalizePhone(dto.phone!), name: dto.customerName, nameNormalized: dto.customerName ? normalizeName(dto.customerName) : undefined, address: dto.customerAddress },
           });
         if (!dto.customerUnknown && !customer) throw new BadRequestException('Không tìm thấy khách hàng');
         const dueDate = localDate(dto.dueDate);
         if (dueDate && Number.isNaN(dueDate.getTime())) throw new BadRequestException('Ngày hẹn trả không hợp lệ');
+        if (dueDate && dueDate < vietnamTodayBounds().start) throw new BadRequestException('Ngày hẹn trả phải là hôm nay hoặc ngày sau đó');
         const sequence = await tx.order.create({ data: { code: `PENDING-${crypto.randomUUID()}`, customerId: customer?.id, customerUnknown: dto.customerUnknown, note: dto.note, dueDate, duePeriod: dto.duePeriod, deliveryAddress: dto.deliveryAddress, receivedServices, createdById: userId } });
         const code = `ZU-${String(sequence.sequence).padStart(4, '0')}`;
         const saved = await tx.order.update({ where: { id: sequence.id }, data: { code } });
@@ -186,7 +195,7 @@ export class OrdersService {
   async attachCustomer(idOrCode: string, dto: AttachCustomerDto, userId: string) {
     const current = await this.get(idOrCode);
     if (current.status !== OrderStatus.PROCESSING && current.status !== OrderStatus.READY_FOR_PICKUP) throw new BadRequestException('Không thể gắn khách vào đơn đã kết thúc');
-    const customer = await this.prisma.customer.upsert({ where: { phone: normalizePhone(dto.phone) }, update: {}, create: { phone: normalizePhone(dto.phone), name: dto.name } });
+    const customer = await this.prisma.customer.upsert({ where: { phone: normalizePhone(dto.phone) }, update: {}, create: { phone: normalizePhone(dto.phone), name: dto.name, nameNormalized: dto.name ? normalizeName(dto.name) : undefined } });
     return this.prisma.$transaction(async (tx) => {
       const order = await tx.order.update({ where: { id: current.id }, data: { customerId: customer.id, customerUnknown: false }, include: details });
       await tx.auditLog.create({ data: { userId, action: 'ORDER_CUSTOMER_ATTACHED', entityType: 'ORDER', entityId: order.id, before: { customerId: current.customerId }, after: { customerId: customer.id } } });

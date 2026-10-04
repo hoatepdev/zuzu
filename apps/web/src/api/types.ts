@@ -42,6 +42,8 @@ export type CustomerDetail = Customer & {
 export type Service = {
   id: string;
   name: string;
+  stt: number;
+  isDefault: boolean;
   unit: "KG" | "ITEM" | "PAIR";
   price: string;
   active: boolean;

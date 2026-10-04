@@ -17,11 +17,12 @@ async function main() {
     create: { username, name: 'Chủ cửa hàng', role: Role.OWNER, passwordHash: await hashPassword(password) },
   });
 
-  for (const service of [
-    ['Giặt thường', ServiceUnit.KG, 15000], ['Phân loại', ServiceUnit.KG, 17000],
-    ['Chăn', ServiceUnit.KG, 20000], ['Giày', ServiceUnit.PAIR, 50000],
-    ['Topper', ServiceUnit.ITEM, 100000], ['Tẩy điểm', ServiceUnit.ITEM, 30000]
-  ] as const) await prisma.service.upsert({ where: { name: service[0] }, update: {}, create: { name: service[0], unit: service[1], price: service[2] } });
+  await prisma.service.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
+  for (const [stt, name, unit, price] of [
+    [1, 'Giặt thường', ServiceUnit.KG, 15000], [2, 'Phân loại', ServiceUnit.KG, 17000],
+    [3, 'Chăn', ServiceUnit.KG, 20000], [4, 'Giày', ServiceUnit.PAIR, 50000],
+    [5, 'Topper', ServiceUnit.ITEM, 100000], [6, 'Tẩy điểm', ServiceUnit.ITEM, 30000]
+  ] as const) await prisma.service.upsert({ where: { name }, update: { stt, isDefault: name === 'Giặt thường' }, create: { name, stt, unit, price, isDefault: name === 'Giặt thường' } });
 
   await prisma.storeSetting.upsert({ where: { key: 'LOYALTY_VND_PER_POINT' }, update: {}, create: { key: 'LOYALTY_VND_PER_POINT', value: '10000' } });
   console.log(`Bootstrapped owner "${username}" and default service catalog. Change this password after first login.`);

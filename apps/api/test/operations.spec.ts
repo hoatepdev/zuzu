@@ -54,6 +54,15 @@ it('cancels eligible orders once and audits the change', async () => {
   await expect(orders.attachCustomer(order.id, { phone: '0900000001' }, managerId)).rejects.toThrow('Không thể gắn khách');
 });
 
+it('orders services and keeps one default service', async () => {
+  await services.update(serviceId, { isDefault: true }, managerId);
+  const defaults = await prisma.service.findMany({ where: { isDefault: true } });
+  expect(defaults).toHaveLength(1);
+  expect(defaults[0].id).toBe(serviceId);
+  const listed = await services.active();
+  expect(listed.map((service) => service.stt)).toEqual([...listed.map((service) => service.stt)].sort((a, b) => a - b));
+});
+
 it('preserves customer names and service snapshots while exposing CRM history', async () => {
   const phone = `09${suffix.slice(-8)}`;
   const first = await orders.create({ phone, customerName: 'Tên đúng', customerUnknown: false }, managerId); orderIds.push(first.id); customerId = first.customerId!;
@@ -69,6 +78,8 @@ it('preserves customer names and service snapshots while exposing CRM history', 
   expect(found[0].id).toBe(customerId);
   const prefixMatches = await customers.search(phone.slice(0, 4), true);
   expect(prefixMatches.some((customer) => customer.id === customerId)).toBe(true);
+  const nameMatches = await customers.search("tên đúng");
+  expect(nameMatches.some((customer) => customer.id === customerId)).toBe(true);
   const detail = await customers.get(customerId);
   expect(detail.orders).toHaveLength(2);
   expect(detail.loyalty[0].points).toBe(3);
@@ -79,12 +90,14 @@ it('preserves customer names and service snapshots while exposing CRM history', 
 it('persists receive metadata without priced items and preserves it on reprint', async () => {
   await services.update(serviceId, { active: true }, managerId);
   const phone = `08${suffix.slice(-8)}`;
+  const dueDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const dueDateIso = new Date(`${dueDate}T00:00:00+07:00`).toISOString();
   const order = await orders.create({
     customerUnknown: false,
     phone,
     customerName: 'Khách nhận đồ',
     customerAddress: '12 Nguyễn Huệ',
-    dueDate: '2026-10-05',
+    dueDate,
     duePeriod: 'MORNING',
     deliveryAddress: '34 Lê Lợi',
     serviceIds: [serviceId],
@@ -92,21 +105,27 @@ it('persists receive metadata without priced items and preserves it on reprint',
   orderIds.push(order.id);
   receiveCustomerId = order.customerId!;
   expect(order.customer?.address).toBe('12 Nguyễn Huệ');
-  expect(order.dueDate?.toISOString()).toBe('2026-10-04T17:00:00.000Z');
+  expect(order.dueDate?.toISOString()).toBe(dueDateIso);
   expect(order.duePeriod).toBe('MORNING');
   expect(order.deliveryAddress).toBe('34 Lê Lợi');
   expect(order.receivedServices).toEqual([{ serviceId, serviceName: `Giặt test ${suffix}` }]);
   expect(order.items).toHaveLength(0);
   const initial = await prisma.printJob.findFirstOrThrow({ where: { orderId: order.id } });
-  expect(initial.payload).toMatchObject({ dueDate: '2026-10-04T17:00:00.000Z', duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
+  expect(initial.payload).toMatchObject({ dueDate: dueDateIso, duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
   await orders.reprint(order.id, managerId);
   const jobs = await prisma.printJob.findMany({ where: { orderId: order.id }, orderBy: { createdAt: 'asc' } });
   expect(jobs).toHaveLength(2);
-  expect(jobs[1].payload).toMatchObject({ dueDate: '2026-10-04T17:00:00.000Z', duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
+  expect(jobs[1].payload).toMatchObject({ dueDate: dueDateIso, duePeriod: 'MORNING', deliveryAddress: '34 Lê Lợi', services: [`Giặt test ${suffix}`] });
 });
 
-it('rejects invalid receive dates and inactive services', async () => {
+it('rejects invalid and past receive dates and inactive services', async () => {
+  const yesterday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() - 24 * 60 * 60 * 1000));
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
   await expect(orders.create({ customerUnknown: true, dueDate: '2026-02-30' }, managerId)).rejects.toThrow('Ngày hẹn trả không hợp lệ');
+  await expect(orders.create({ customerUnknown: true, dueDate: yesterday }, managerId)).rejects.toThrow('Ngày hẹn trả phải là hôm nay hoặc ngày sau đó');
+  const todayOrder = await orders.create({ customerUnknown: true, dueDate: today }, managerId);
+  orderIds.push(todayOrder.id);
+  expect(todayOrder.dueDate?.toISOString()).toBe(new Date(`${today}T00:00:00+07:00`).toISOString());
   await services.update(serviceId, { active: false }, managerId);
   await expect(orders.create({ customerUnknown: true, serviceIds: [serviceId] }, managerId)).rejects.toThrow('Dịch vụ không còn hoạt động');
   await services.update(serviceId, { active: true }, managerId);

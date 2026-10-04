@@ -23,7 +23,7 @@ import { CustomersService } from "./customers.service";
 export class CustomersController {
   constructor(private readonly customers: CustomersService) {}
   @Get("search") search(@Query("q") q = "") {
-    return q.trim() ? this.customers.search(q, true) : [];
+    return q.trim() ? this.customers.search(q) : [];
   }
   @Get() list(@Query() query: ListCustomersDto) {
     return this.customers.list(query);

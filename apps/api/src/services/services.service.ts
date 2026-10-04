@@ -5,15 +5,27 @@ import { CreateServiceDto, UpdateServiceDto } from './services.dto';
 @Injectable()
 export class ServicesService {
   constructor(private readonly prisma: PrismaService) {}
-  active() { return this.prisma.service.findMany({ where: { active: true }, orderBy: { name: 'asc' } }); }
-  all() { return this.prisma.service.findMany({ orderBy: { name: 'asc' } }); }
+  active() { return this.prisma.service.findMany({ where: { active: true }, orderBy: [{ stt: 'asc' }, { name: 'asc' }] }); }
+  all() { return this.prisma.service.findMany({ orderBy: [{ stt: 'asc' }, { name: 'asc' }] }); }
   async create(dto: CreateServiceDto, userId: string) {
-    try { return await this.prisma.$transaction(async (tx) => { const service = await tx.service.create({ data: dto }); await tx.auditLog.create({ data: { userId, action: 'SERVICE_CREATED', entityType: 'SERVICE', entityId: service.id, after: { name: service.name, unit: service.unit, price: service.price.toString(), active: service.active } } }); return service; }); }
-    catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new BadRequestException('Tên dịch vụ đã tồn tại'); throw error; }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (dto.isDefault) await tx.service.updateMany({ where: { isDefault: true }, data: { isDefault: false } });
+        const service = await tx.service.create({ data: { ...dto, stt: dto.stt ?? (await tx.service.aggregate({ _max: { stt: true } }))._max.stt! + 1, isDefault: dto.isDefault ?? false } });
+        await tx.auditLog.create({ data: { userId, action: 'SERVICE_CREATED', entityType: 'SERVICE', entityId: service.id, after: { name: service.name, stt: service.stt, isDefault: service.isDefault, unit: service.unit, price: service.price.toString(), active: service.active } } });
+        return service;
+      });
+    } catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new BadRequestException('Tên dịch vụ đã tồn tại'); throw error; }
   }
   async update(id: string, dto: UpdateServiceDto, userId: string) {
     const current = await this.prisma.service.findUnique({ where: { id } }); if (!current) throw new NotFoundException('Không tìm thấy dịch vụ');
-    try { return await this.prisma.$transaction(async (tx) => { const service = await tx.service.update({ where: { id }, data: dto }); await tx.auditLog.create({ data: { userId, action: 'SERVICE_UPDATED', entityType: 'SERVICE', entityId: id, before: { name: current.name, unit: current.unit, price: current.price.toString(), active: current.active }, after: { name: service.name, unit: service.unit, price: service.price.toString(), active: service.active } } }); return service; }); }
-    catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new BadRequestException('Tên dịch vụ đã tồn tại'); throw error; }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        if (dto.isDefault) await tx.service.updateMany({ where: { isDefault: true, id: { not: id } }, data: { isDefault: false } });
+        const service = await tx.service.update({ where: { id }, data: dto });
+        await tx.auditLog.create({ data: { userId, action: 'SERVICE_UPDATED', entityType: 'SERVICE', entityId: id, before: { name: current.name, stt: current.stt, isDefault: current.isDefault, unit: current.unit, price: current.price.toString(), active: current.active }, after: { name: service.name, stt: service.stt, isDefault: service.isDefault, unit: service.unit, price: service.price.toString(), active: service.active } } });
+        return service;
+      });
+    } catch (error) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new BadRequestException('Tên dịch vụ đã tồn tại'); throw error; }
   }
 }
