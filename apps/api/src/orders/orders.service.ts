@@ -46,7 +46,7 @@ export class OrdersService {
           ? await tx.customer.findUnique({ where: { id: dto.customerId } })
           : await tx.customer.upsert({
             where: { phone: normalizePhone(dto.phone!) },
-            update: dto.customerName ? { name: dto.customerName, nameNormalized: normalizeName(dto.customerName), address: dto.customerAddress } : {},
+            update: {},
             create: { phone: normalizePhone(dto.phone!), name: dto.customerName, nameNormalized: dto.customerName ? normalizeName(dto.customerName) : undefined, address: dto.customerAddress },
           });
         if (!dto.customerUnknown && !customer) throw new BadRequestException('Không tìm thấy khách hàng');
@@ -208,17 +208,25 @@ export class OrdersService {
     if (current.status !== OrderStatus.READY_FOR_PICKUP || !current.total) throw new BadRequestException('Đơn chưa sẵn sàng để trả');
     if (!current.customerId) throw new BadRequestException('Vui lòng gắn khách trước khi trả đồ');
     if (current.payments.length) throw new BadRequestException('Đơn đã thanh toán');
-    const points = calculatePoints(current.total, await this.settings.loyaltyVndPerPoint());
     return this.prisma.$transaction(async (tx) => {
-      const claimed = await tx.order.updateMany({ where: { id: current.id, status: OrderStatus.READY_FOR_PICKUP }, data: { status: OrderStatus.COMPLETED, completedAt: new Date(), returnedById: userId } });
-      if (!claimed.count) throw new BadRequestException('Đơn đã được trả');
+      const latest = await tx.order.findUniqueOrThrow({ where: { id: current.id }, include: { customer: true, payments: true } });
+      if (latest.status !== OrderStatus.READY_FOR_PICKUP || !latest.total || !latest.customerId || latest.payments?.length) {
+        throw new BadRequestException('Đơn đã thay đổi, không thể trả');
+      }
+      const claimed = await tx.order.updateMany({
+        where: { id: latest.id, status: OrderStatus.READY_FOR_PICKUP, updatedAt: latest.updatedAt, payments: { none: {} } },
+        data: { status: OrderStatus.COMPLETED, completedAt: new Date(), returnedById: userId },
+      });
+      if (!claimed.count) throw new BadRequestException('Đơn đã thay đổi, không thể trả');
+      const order = await tx.order.findUniqueOrThrow({ where: { id: latest.id }, include: details });
+      const points = calculatePoints(order.total!, await this.settings.loyaltyVndPerPoint());
       const shift = await tx.shift.findFirst({ where: { closedAt: null }, select: { id: true } });
-      await tx.payment.create({ data: { orderId: current.id, amount: current.total!, method: dto.method, createdById: userId, shiftId: shift?.id } });
-      if (points) await tx.loyaltyTransaction.create({ data: { customerId: current.customerId!, orderId: current.id, points, type: 'ORDER' } });
-      await tx.customer.update({ where: { id: current.customerId! }, data: { totalPoints: { increment: points }, totalOrders: { increment: 1 }, totalKg: { increment: current.weight ?? 0 }, totalSpent: { increment: current.total! }, firstOrderAt: current.customer?.firstOrderAt ?? new Date(), lastOrderAt: new Date() } });
-      const order = await tx.order.findUniqueOrThrow({ where: { id: current.id }, include: details });
-      await tx.auditLog.create({ data: { userId, action: 'ORDER_RETURNED', entityType: 'ORDER', entityId: order.id, before: { status: current.status }, after: { status: order.status, paymentMethod: dto.method, points } } });
-      return order;
+      await tx.payment.create({ data: { orderId: order.id, amount: order.total!, method: dto.method, createdById: userId, shiftId: shift?.id } });
+      if (points) await tx.loyaltyTransaction.create({ data: { customerId: order.customerId!, orderId: order.id, points, type: 'ORDER' } });
+      await tx.customer.update({ where: { id: order.customerId! }, data: { totalPoints: { increment: points }, totalOrders: { increment: 1 }, totalKg: { increment: order.weight ?? 0 }, totalSpent: { increment: order.total! }, firstOrderAt: order.customer?.firstOrderAt ?? new Date(), lastOrderAt: new Date() } });
+      const saved = await tx.order.findUniqueOrThrow({ where: { id: order.id }, include: details });
+      await tx.auditLog.create({ data: { userId, action: 'ORDER_RETURNED', entityType: 'ORDER', entityId: saved.id, before: { status: latest.status }, after: { status: saved.status, paymentMethod: dto.method, points } } });
+      return saved;
     });
   }
 

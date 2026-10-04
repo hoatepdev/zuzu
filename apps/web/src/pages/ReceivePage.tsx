@@ -118,7 +118,7 @@ export function ReceivePage() {
       setLookup("");
       return;
     }
-    const timer = window.setTimeout(() => setLookup(value), 350);
+    const timer = window.setTimeout(() => setLookup(isPhoneLike(value) ? normalizePhone(value) : value), 350);
     return () => window.clearTimeout(timer);
   }, [phone, unknown, newCustomer]);
 
@@ -303,7 +303,7 @@ export function ReceivePage() {
                   <Spin size="small" /> Đang tìm khách...
                 </div>
               )}
-              {customers.data?.length && !selectedCustomer ? (
+              {lookup && customers.data?.length && !selectedCustomer ? (
                 <div
                   className="customer-suggestions"
                   role="listbox"

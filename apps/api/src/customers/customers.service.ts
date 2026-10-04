@@ -10,6 +10,10 @@ const normalizeName = (value: string) => value
   .toLowerCase()
   .trim()
   .replace(/\s+/g, ' ');
+const normalizePhone = (value: string) => {
+  const compact = value.replace(/[\s().-]/g, '');
+  return compact.startsWith('+84') ? `0${compact.slice(3)}` : compact;
+};
 const nameTerms = (value: string) => normalizeName(value)
   .split(' ')
   .filter(Boolean)
@@ -21,7 +25,7 @@ export class CustomersService {
   private where(q?: string): Prisma.CustomerWhereInput | undefined { const value = q?.trim(); if (!value) return undefined; return { OR: [{ phone: { contains: value.replace(/\s/g, '') } }, { AND: nameTerms(value) }] }; }
   search(q: string, _phonePrefix = false) {
     const raw = q.trim();
-    const value = raw.replace(/\s/g, '');
+    const value = normalizePhone(raw);
     const where = /^\d+$/.test(value)
       ? { phone: { startsWith: value } }
       : { AND: nameTerms(raw) };

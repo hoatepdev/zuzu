@@ -65,9 +65,13 @@ it('orders services and keeps one default service', async () => {
 
 it('preserves customer names and service snapshots while exposing CRM history', async () => {
   const phone = `09${suffix.slice(-8)}`;
-  const first = await orders.create({ phone, customerName: 'Tên đúng', customerUnknown: false }, managerId); orderIds.push(first.id); customerId = first.customerId!;
-  const second = await orders.create({ phone, customerName: 'Tên nhập nhầm', customerUnknown: false }, managerId); orderIds.push(second.id);
+  const first = await orders.create({ phone, customerName: 'Tên đúng', customerAddress: 'Địa chỉ cũ', customerUnknown: false }, managerId); orderIds.push(first.id); customerId = first.customerId!;
+  const second = await orders.create({ phone, customerName: 'Tên nhập nhầm', customerAddress: 'Địa chỉ sai', customerUnknown: false }, managerId); orderIds.push(second.id);
   expect(second.customer?.name).toBe('Tên đúng');
+  expect(second.customer?.address).toBe('Địa chỉ cũ');
+  expect(second.customer?.nameNormalized).toBe('ten dung');
+  const formattedPhone = `+84 ${phone.slice(1, 4)}-${phone.slice(4, 7)}-${phone.slice(7)}`;
+  expect((await customers.search(formattedPhone))[0].id).toBe(customerId);
   await orders.complete(first.id, { items: [{ serviceId, quantity: 2 }] }, managerId);
   await orders.returnOrder(first.id, { method: PaymentMethod.CASH }, managerId);
   const item = await prisma.orderItem.findFirstOrThrow({ where: { orderId: first.id } });

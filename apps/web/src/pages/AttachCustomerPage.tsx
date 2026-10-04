@@ -11,7 +11,7 @@ export function AttachCustomerPage() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const deferredPhone = useDeferredValue(phone);
-  const normalizedPhone = deferredPhone.replace(/\s/g, "");
+  const normalizedPhone = deferredPhone.replace(/[\s().-]/g, "").replace(/^\+84/, "0");
   const customers = useQuery({
     queryKey: ["customers", "lookup", normalizedPhone],
     queryFn: () =>
@@ -21,7 +21,7 @@ export function AttachCustomerPage() {
     enabled: normalizedPhone.length >= 8,
   });
   const found = customers.data?.find(
-    (customer) => customer.phone.replace(/\s/g, "") === normalizedPhone,
+    (customer) => customer.phone === normalizedPhone,
   );
   const attach = useMutation({
     mutationFn: (values: { phone: string; name?: string }) =>

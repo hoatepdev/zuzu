@@ -58,10 +58,11 @@ export function CompletePage() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [showServicePicker, setShowServicePicker] = useState(false);
   const items = Form.useWatch("items", form) ?? [];
+  const watchedDiscount = Form.useWatch("discount", form);
   const discount =
     session.data?.role === "STAFF"
       ? Number(order.data?.discount ?? 0)
-      : Number(Form.useWatch("discount", form) ?? 0);
+      : Number(watchedDiscount ?? 0);
   const adjusting = order.data?.status === "READY_FOR_PICKUP";
   const serviceById = useMemo(
     () => new Map((services.data ?? []).map((service) => [service.id, service])),
