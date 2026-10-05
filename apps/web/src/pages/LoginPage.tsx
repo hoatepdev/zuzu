@@ -23,13 +23,13 @@ export function LoginPage() {
       }),
     onSuccess: (user) => {
       queryClient.setQueryData(["session"], user);
-      navigate(user.role === "STAFF" ? "/" : "/dashboard");
+      navigate(user.role === "STAFF" ? "/staff" : "/dashboard");
     },
   });
   if (session.data)
     return (
       <Navigate
-        to={session.data.role === "STAFF" ? "/" : "/dashboard"}
+        to={session.data.role === "STAFF" ? "/staff" : "/dashboard"}
         replace
       />
     );

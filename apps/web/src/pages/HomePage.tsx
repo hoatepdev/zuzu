@@ -29,7 +29,7 @@ export function HomePage() {
     (location.state as { receivedCode?: string } | null)?.receivedCode,
   );
   useEffect(() => {
-    if (receivedCode) navigate("/", { replace: true });
+    if (receivedCode) navigate("/staff", { replace: true });
   }, [receivedCode, navigate]);
   const summary = useQuery({
     queryKey: ["orders", "summary"],

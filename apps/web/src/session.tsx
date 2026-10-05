@@ -14,12 +14,12 @@ export function RequireAuth() {
 export function RequireManager() {
   const session = useSession();
   if (session.isLoading) return <div className="center">Đang tải…</div>;
-  if (session.data?.role === 'STAFF') return <Navigate to="/" replace/>;
+  if (session.data?.role === 'STAFF') return <Navigate to="/staff" replace/>;
   return <Outlet/>;
 }
 export function RequireOwner() {
   const session = useSession();
   if (session.isLoading) return <div className="center">Đang tải…</div>;
-  if (session.data?.role !== 'OWNER') return <Navigate to="/" replace/>;
+  if (session.data?.role !== 'OWNER') return <Navigate to="/staff" replace/>;
   return <Outlet/>;
 }

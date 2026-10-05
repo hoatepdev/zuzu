@@ -47,7 +47,7 @@ export function ExpenseFormPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["expenses"] });
       message.success("Đã lưu khoản chi");
-      navigate("/");
+      navigate("/staff");
     },
   });
 

@@ -10,7 +10,7 @@ export default defineConfig({
       manifest: {
         name: "ZUZU Laundry",
         short_name: "ZUZU",
-        start_url: "/",
+        start_url: "/login",
         display: "standalone",
         background_color: "#F7F3EA",
         theme_color: "#0E7C66",

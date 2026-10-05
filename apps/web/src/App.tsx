@@ -20,7 +20,7 @@ import { useSession } from "./session";
 import { ZuzuWordmark } from "./components/common";
 
 const staffMobileItems = [
-  { key: "/", icon: <HomeOutlined />, text: "Trang chủ" },
+  { key: "/staff", icon: <HomeOutlined />, text: "Trang chủ" },
   { key: "/scan", icon: <ScanOutlined />, text: "Quét QR" },
   { key: "/orders", icon: <OrderedListOutlined />, text: "Đơn hàng" },
   { key: "/customers", icon: <TeamOutlined />, text: "Khách hàng" },
@@ -39,7 +39,7 @@ function mobileItemsFor(role?: string) {
 }
 
 const mobileHomeFor = (role?: string) =>
-  role === "STAFF" ? "/" : "/dashboard";
+  role === "STAFF" ? "/staff" : "/dashboard";
 
 const mobileKeyFor = (pathname: string, items: typeof staffMobileItems) =>
   items.find(
@@ -74,7 +74,7 @@ const management = [
   },
 ];
 const staffDesktop = [
-  { key: "/", icon: <HomeOutlined />, text: "Trang chủ" },
+  { key: "/staff", icon: <HomeOutlined />, text: "Trang chủ" },
   { key: "/scan", icon: <ScanOutlined />, text: "Quét QR" },
   { key: "/orders", icon: <OrderedListOutlined />, text: "Đơn hàng" },
   { key: "/customers", icon: <TeamOutlined />, text: "Khách hàng" },
@@ -167,7 +167,7 @@ export function App() {
       </a>
       <aside className="side-nav">
         <Link
-          to={isStaff ? "/" : "/dashboard"}
+          to={isStaff ? "/staff" : "/dashboard"}
           className="side-brand"
           aria-label="ZUZU — về trang chính"
         >
@@ -198,7 +198,7 @@ export function App() {
             </button>
           )}
           <Link
-            to={isStaff ? "/" : "/dashboard"}
+            to={isStaff ? "/staff" : "/dashboard"}
             aria-label="ZUZU — về trang chính"
           >
             <ZuzuWordmark />
@@ -240,7 +240,7 @@ export function App() {
         )}
         <main
           id="main-content"
-          className={`content ${isStaff ? "staff-content" : "management-content"} ${location.pathname === "/" ? "home-content" : ""} ${location.pathname === "/receive" ? "receive-content" : ""}`}
+          className={`content ${isStaff ? "staff-content" : "management-content"} ${location.pathname === "/staff" ? "home-content" : ""} ${location.pathname === "/receive" ? "receive-content" : ""}`}
         >
           <Outlet />
         </main>

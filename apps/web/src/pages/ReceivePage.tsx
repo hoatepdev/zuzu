@@ -190,7 +190,7 @@ export function ReceivePage() {
       }),
     onSuccess: (order) => {
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
-      navigate("/", { state: { receivedCode: order.code } });
+      navigate("/staff", { state: { receivedCode: order.code } });
     },
   });
 
