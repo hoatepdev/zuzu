@@ -240,7 +240,7 @@ export function App() {
         )}
         <main
           id="main-content"
-          className={`content ${isStaff ? "staff-content" : "management-content"} ${location.pathname === "/" ? "home-content" : ""}`}
+          className={`content ${isStaff ? "staff-content" : "management-content"} ${location.pathname === "/" ? "home-content" : ""} ${location.pathname === "/receive" ? "receive-content" : ""}`}
         >
           <Outlet />
         </main>

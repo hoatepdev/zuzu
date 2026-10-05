@@ -457,71 +457,73 @@ export function ReceivePage() {
         </section>
 
         <section className="task-section schedule-section">
-          <Form.Item
-            name="dueDate"
-            label="Hẹn trả"
-            getValueProps={(value: string) => ({
-              value: value ? dayjs(value) : undefined,
-            })}
-            normalize={(value) => value?.format("YYYY-MM-DD")}
-            rules={[{ required: true, message: "Chọn ngày hẹn trả" }]}
-          >
-            <DatePicker
-              size="large"
-              format={["DD/MM/YYYY", "DDMM", "D/M/YYYY"]}
-              placeholder="DD/MM/YYYY hoặc DDMM hoặc ngày"
-              preserveInvalidOnBlur
-              disabledDate={(current) =>
-                current.format("YYYY-MM-DD") < todayVN()
-              }
-              onBlur={(event) => {
-                const input = event.target;
-                if (!(input instanceof HTMLInputElement)) return;
-                const result = normalizeDueDate(input.value);
-                if (result && "display" in result) input.value = result.display;
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                const input = event.target;
-                if (!(input instanceof HTMLInputElement)) return;
-                const result = normalizeDueDate(input.value);
-                if (result && "display" in result) input.value = result.display;
-                event.preventDefault();
-              }}
-              style={{ width: "100%" }}
-            />
-          </Form.Item>
-          <div className="date-shortcuts" aria-label="Ngày hẹn trả nhanh">
-            {[
-              { label: "Hôm nay", value: todayVN() },
-              { label: "Ngày mai", value: dueDefault },
-              { label: "+2 ngày", value: addDays(todayVN(), 2) },
-            ].map((option) => (
-              <Button
-                key={option.label}
-                type={selectedDueDate === option.value ? "primary" : "default"}
-                onClick={() => {
-                  form.setFields([
-                    { name: "dueDate", value: option.value, errors: [] },
-                  ]);
+          <div className="schedule-grid">
+            <Form.Item
+              name="dueDate"
+              label="Hẹn trả"
+              getValueProps={(value: string) => ({
+                value: value ? dayjs(value) : undefined,
+              })}
+              normalize={(value) => value?.format("YYYY-MM-DD")}
+              rules={[{ required: true, message: "Chọn ngày hẹn trả" }]}
+            >
+              <DatePicker
+                size="large"
+                format={["DD/MM/YYYY", "DDMM", "D/M/YYYY"]}
+                placeholder="DD/MM/YYYY hoặc DDMM hoặc ngày"
+                preserveInvalidOnBlur
+                disabledDate={(current) =>
+                  current.format("YYYY-MM-DD") < todayVN()
+                }
+                onBlur={(event) => {
+                  const input = event.target;
+                  if (!(input instanceof HTMLInputElement)) return;
+                  const result = normalizeDueDate(input.value);
+                  if (result && "display" in result) input.value = result.display;
                 }}
-              >
-                {option.label}
-              </Button>
-            ))}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  const input = event.target;
+                  if (!(input instanceof HTMLInputElement)) return;
+                  const result = normalizeDueDate(input.value);
+                  if (result && "display" in result) input.value = result.display;
+                  event.preventDefault();
+                }}
+                style={{ width: "100%" }}
+              />
+            </Form.Item>
+            <div className="date-shortcuts" aria-label="Ngày hẹn trả nhanh">
+              {[
+                { label: "Hôm nay", value: todayVN() },
+                { label: "Ngày mai", value: dueDefault },
+                { label: "+2 ngày", value: addDays(todayVN(), 2) },
+              ].map((option) => (
+                <Button
+                  key={option.label}
+                  type={selectedDueDate === option.value ? "primary" : "default"}
+                  onClick={() => {
+                    form.setFields([
+                      { name: "dueDate", value: option.value, errors: [] },
+                    ]);
+                  }}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+            <Form.Item label="Buổi hẹn trả">
+              <QuickChoice
+                value={duePeriod}
+                onChange={(event) =>
+                  setDuePeriod(event.target.value as "" | "MORNING" | "AFTERNOON")
+                }
+                options={[
+                  { label: "Sáng", value: "MORNING" },
+                  { label: "Chiều", value: "AFTERNOON" },
+                ]}
+              />
+            </Form.Item>
           </div>
-          <Form.Item label="Buổi hẹn trả">
-            <QuickChoice
-              value={duePeriod}
-              onChange={(event) =>
-                setDuePeriod(event.target.value as "" | "MORNING" | "AFTERNOON")
-              }
-              options={[
-                { label: "Sáng", value: "MORNING" },
-                { label: "Chiều", value: "AFTERNOON" },
-              ]}
-            />
-          </Form.Item>
           <Form.Item name="deliveryAddress" label="Địa chỉ giao hàng">
             <Input.TextArea
               rows={3}

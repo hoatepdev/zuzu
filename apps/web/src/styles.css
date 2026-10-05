@@ -2055,6 +2055,21 @@ h3 {
 .desktop-data-table {
   display: none;
 }
+.management-table {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.management-table .ant-table-container {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.management-table .ant-table-cell {
+  white-space: nowrap;
+}
+.management-table .table-actions {
+  flex-wrap: wrap;
+}
 .mobile-data-list {
   display: grid;
 }
@@ -2171,17 +2186,32 @@ h3 {
   .content {
     padding: 28px 28px calc(96px + env(safe-area-inset-bottom));
   }
+  .page-header {
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .page-header .ant-btn {
+    min-height: 44px;
+  }
   .quick-choice:not(.payment-choice) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .filter-bar {
-    grid-template-columns: minmax(260px, 1fr) minmax(180px, 240px);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+    align-items: start;
   }
   .filter-bar > .ant-picker {
     grid-column: 1 / -1;
+    width: 100%;
   }
   .dashboard-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .management-table {
+    margin-top: 16px;
+  }
+  .management-table .ant-table {
+    min-width: 0;
   }
   .scanner-page {
     margin: -28px -28px 0;
@@ -2349,6 +2379,9 @@ h3 {
   .staff-content {
     max-width: 780px;
   }
+  .staff-content.receive-content {
+    max-width: 1120px;
+  }
   .staff-content.home-content {
     max-width: 1160px;
     overflow-x: clip;
@@ -2444,17 +2477,45 @@ h3 {
   .scanner-foot {
     padding-top: 18px;
   }
-  .receive-form,
+  .receive-form {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    align-items: start;
+  }
   .complete-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+  }
+  .receive-form .receive-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .receive-form .schedule-section {
+    display: grid;
+    gap: 0 16px;
+  }
+  .receive-form .schedule-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 16px;
+  }
+  .receive-form .schedule-grid .date-shortcuts {
+    grid-column: 1;
+  }
+  .receive-form .schedule-grid > .ant-form-item:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .receive-form .schedule-grid .quick-choice {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .receive-form .schedule-section > .ant-form-item {
+    grid-column: 1 / -1;
   }
   .receive-form .bottom-action-bar,
   .complete-form .bottom-action-bar {
     grid-column: 1 / -1;
   }
   .complete-form .total-preview {
-    align-self: stretch;
+    /* align-self: stretch; */
   }
   .payment-panel {
     padding: 20px;

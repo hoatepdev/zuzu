@@ -112,6 +112,7 @@ export function UsersPage() {
         Nhân viên
       </PageHeader>
       <Table
+        className="management-table"
         rowKey="id"
         loading={query.isLoading}
         dataSource={query.data}

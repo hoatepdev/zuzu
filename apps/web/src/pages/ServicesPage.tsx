@@ -58,6 +58,7 @@ export function ServicesPage() {
         Bảng giá
       </PageHeader>
       <Table
+        className="management-table"
         rowKey="id"
         loading={query.isLoading}
         dataSource={query.data}

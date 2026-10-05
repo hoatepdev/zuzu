@@ -137,6 +137,7 @@ export function ExpensesPage() {
         <Alert type="error" message={query.error.message} showIcon />
       )}
       <Table
+        className="management-table"
         rowKey="id"
         loading={query.isLoading}
         dataSource={query.data?.items}

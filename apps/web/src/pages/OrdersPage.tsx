@@ -155,7 +155,7 @@ export function OrdersPage() {
         <>
           {management && (
             <Table<Order>
-              className="desktop-data-table"
+              className="desktop-data-table management-table"
               rowKey="id"
               dataSource={items}
               onRow={(order) => ({

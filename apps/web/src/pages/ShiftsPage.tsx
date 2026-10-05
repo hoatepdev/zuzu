@@ -31,7 +31,7 @@ export function ShiftsPage() {
     </div>
     <div className="panel">
       <h2 className="panel-title">Lịch sử ca</h2>
-      <Table rowKey="id" size="small" loading={history.isLoading} dataSource={history.data?.items} pagination={{ total: history.data?.total, pageSize: 20 }} scroll={{ x: 760 }} columns={[
+      <Table className="management-table" rowKey="id" size="small" loading={history.isLoading} dataSource={history.data?.items} pagination={{ total: history.data?.total, pageSize: 20 }} scroll={{ x: 760 }} columns={[
         { title: 'Mở ca', render: (_, shift) => new Date(shift.openedAt).toLocaleString('vi-VN') },
         { title: 'Chốt ca', render: (_, shift) => shift.closedAt ? new Date(shift.closedAt).toLocaleString('vi-VN') : '—' },
         { title: 'Người chốt', render: (_, shift) => shift.closedBy?.name ?? '—' },
