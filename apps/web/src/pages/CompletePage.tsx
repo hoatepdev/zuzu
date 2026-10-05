@@ -17,6 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order, Service } from "../api/types";
 import {
+  AmountInput,
   BottomActionBar,
   EmptyState,
   Money,
@@ -308,15 +309,7 @@ export function CompletePage() {
                               },
                             ]}
                           >
-                            <InputNumber
-                              className="amount-input"
-                              size="large"
-                              min={0}
-                              precision={0}
-                              inputMode="numeric"
-                              addonAfter="đ"
-                              style={{ width: "100%" }}
-                            />
+                            <AmountInput min={0} />
                           </Form.Item>
                         </div>
                         <div className="editor-total">

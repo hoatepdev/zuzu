@@ -1,4 +1,4 @@
-import { Radio } from "antd";
+import { InputNumber, InputNumberProps, Radio } from "antd";
 import { Link } from "react-router-dom";
 import { Order, OrderStatus } from "../api/types";
 
@@ -14,6 +14,42 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
     <span className={`status-badge st-${status}`}>
       {statusMeta[status].label}
     </span>
+  );
+}
+
+export function quickAmount(value: number): number {
+  return value < 1000 ? value * 1000 : value;
+}
+
+// Nhập <1000 hiểu là nghìn đồng; chỉ chuyển khi blur/Enter để không gián đoạn lúc gõ
+export function AmountInput({ value, onChange, ...props }: InputNumberProps) {
+  const commit = () => {
+    if (typeof value === "number" && value > 0 && value < 1000)
+      onChange?.(quickAmount(value));
+  };
+  return (
+    <InputNumber
+      className="amount-input"
+      size="large"
+      min={1}
+      precision={0}
+      inputMode="numeric"
+      addonAfter="đ"
+      formatter={(v) => (v == null || v === "" ? "" : Number(v).toLocaleString("vi-VN"))}
+      parser={(v) => String(v ?? "").replace(/[^\d]/g, "")}
+      style={{ width: "100%" }}
+      {...props}
+      value={value}
+      onChange={onChange}
+      onBlur={(e) => {
+        commit();
+        props.onBlur?.(e);
+      }}
+      onPressEnter={(e) => {
+        commit();
+        props.onPressEnter?.(e);
+      }}
+    />
   );
 }
 

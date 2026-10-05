@@ -1373,9 +1373,9 @@ h3 {
   background: #fffdf6 !important;
 }
 .quantity-input .ant-input-number-input {
-  height: 78px !important;
+  height: 64px !important;
   padding-inline: 16px !important;
-  font-size: 42px !important;
+  font-size: 30px !important;
   font-weight: 750;
   text-align: center;
   color: var(--ink);
@@ -1383,8 +1383,8 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 .amount-input .ant-input-number-input {
-  height: 54px !important;
-  font-size: 22px !important;
+  height: 64px !important;
+  font-size: 26px !important;
   font-weight: 700;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;

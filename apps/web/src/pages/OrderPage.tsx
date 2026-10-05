@@ -379,7 +379,7 @@ export function OrderPage() {
             title="In lại bill"
             onClick={() => reprint.mutate()}
           >
-            {hasPrimaryAction ? "" : "IN LẠI BILL"}
+            {hasPrimaryAction ? "" : " IN LẠI BILL"}
           </Button>
           {data.status === "PROCESSING" && (
             <Link to={`/orders/${data.code}/complete`}>

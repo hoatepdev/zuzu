@@ -6,7 +6,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   Modal,
   Select,
   Table,
@@ -17,7 +16,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { EXPENSE_CATEGORIES, Expense, Page } from "../api/types";
-import { Money, PageHeader } from "../components/common";
+import { AmountInput, Money, PageHeader } from "../components/common";
 
 export function ExpensesPage() {
   const { message } = AntApp.useApp();
@@ -217,12 +216,7 @@ export function ExpensesPage() {
           onFinish={(values) => update.mutate(values)}
         >
           <Form.Item name="amount" label="Số tiền" rules={[{ required: true }]}>
-            <InputNumber
-              min={1}
-              precision={0}
-              suffix="đ"
-              style={{ width: "100%" }}
-            />
+            <AmountInput />
           </Form.Item>
           <Form.Item
             name="description"

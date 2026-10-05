@@ -5,7 +5,6 @@ import {
   Button,
   Form,
   Input,
-  InputNumber,
   Radio,
   Select,
 } from "antd";
@@ -13,7 +12,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { EXPENSE_CATEGORIES, Expense } from "../api/types";
-import { BottomActionBar, PageHeader } from "../components/common";
+import { AmountInput, BottomActionBar, PageHeader } from "../components/common";
 
 const commonCategories = [
   "Nước giặt / nước xả",
@@ -76,16 +75,7 @@ export function ExpenseFormPage() {
           label="Số tiền"
           rules={[{ required: true, message: "Nhập số tiền" }]}
         >
-          <InputNumber
-            className="amount-input"
-            autoFocus
-            inputMode="numeric"
-            size="large"
-            min={1}
-            precision={0}
-            addonAfter="đ"
-            style={{ width: "100%" }}
-          />
+          <AmountInput autoFocus />
         </Form.Item>
         <Form.Item
           name="category"
