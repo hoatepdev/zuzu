@@ -7,7 +7,7 @@ import { CustomerDetail } from "../api/types";
 import { Money, PageHeader, StatusBadge, orderTime } from "../components/common";
 import { useSession } from "../session";
 export function CustomerDetailPage() {
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const { id = "" } = useParams();
   const session = useSession();
   const qc = useQueryClient();
@@ -25,8 +25,10 @@ export function CustomerDetailPage() {
     onSuccess: () => {
       setOpen(false);
       void qc.invalidateQueries({ queryKey: ["customer", id] });
+      void qc.invalidateQueries({ queryKey: ["customers"] });
       message.success("Đã cập nhật khách");
     },
+    onError: (error) => message.error(error.message),
   });
   const adjust = useMutation({
     mutationFn: (values: { points: number; reason: string }) =>
@@ -49,12 +51,12 @@ export function CustomerDetailPage() {
     <>
       <PageHeader
         sub={customer.phone}
-        extra={session.data?.role !== "STAFF" ? (
+        extra={(
           <>
             <Button onClick={edit}>Sửa</Button>
-            <Button style={{ marginLeft: 8 }} onClick={() => setAdjustOpen(true)}>Điểm</Button>
+            {session.data?.role !== "STAFF" && <Button style={{ marginLeft: 8 }} onClick={() => setAdjustOpen(true)}>Điểm</Button>}
           </>
-        ) : undefined}
+        )}
       >
         {customer.name ?? customer.phone}
       </PageHeader>
@@ -102,11 +104,23 @@ export function CustomerDetailPage() {
         title="Sửa khách hàng"
         open={open}
         onCancel={() => setOpen(false)}
-        onOk={() => form.submit()}
+        onOk={async () => {
+          const values = await form.validateFields();
+          modal.confirm({
+            title: "Xác nhận lưu thông tin?",
+            content: `${values.name || "Chưa có tên"} · ${values.phone}`,
+            okText: "Lưu",
+            cancelText: "Huỷ",
+            onOk: () => save.mutateAsync(values),
+          });
+        }}
         confirmLoading={save.isPending}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)}>
+        <Form form={form} layout="vertical">
           <Form.Item name="name" label="Tên"><Input/></Form.Item>
+          <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: "Nhập số điện thoại" }]}>
+            <Input autoComplete="tel" inputMode="tel"/>
+          </Form.Item>
           <Form.Item name="laundryPreference" label="Sở thích giặt"><Input/></Form.Item>
           <Form.Item name="note" label="Ghi chú"><Input.TextArea/></Form.Item>
           <Form.Item name="marketingOptIn" label="Nhận tin marketing" valuePropName="checked"><Switch/></Form.Item>

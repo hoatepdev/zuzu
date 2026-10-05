@@ -31,7 +31,7 @@ export class CustomersController {
   @Get(":id") get(@Param("id") id: string) {
     return this.customers.get(id);
   }
-  @Patch(":id") @Roles(Role.MANAGER, Role.OWNER) update(
+  @Patch(":id") update(
     @Param("id") id: string,
     @Body() dto: UpdateCustomerDto,
     @CurrentUser() user: SessionUser,

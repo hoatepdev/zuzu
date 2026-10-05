@@ -1,5 +1,4 @@
-import { SearchOutlined } from "@ant-design/icons";
-import { Button, Form, Input } from "antd";
+import { Form, Input } from "antd";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { QrScanner } from "../components/QrScanner";
@@ -23,16 +22,14 @@ export function ScanPage() {
             name="code"
             rules={[{ required: true, message: "Nhập mã đơn" }]}
           >
-            <Input
+            <Input.Search
               autoCapitalize="characters"
               size="large"
               placeholder="Ví dụ: ZU-0182"
-              prefix={<SearchOutlined />}
+              enterButton="Tìm đơn"
+              onSearch={open}
             />
           </Form.Item>
-          <Button htmlType="submit" size="large" type="primary">
-            TÌM ĐƠN
-          </Button>
         </Form>
       </section>
     </div>

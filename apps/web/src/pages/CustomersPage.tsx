@@ -11,7 +11,13 @@ export function CustomersPage() {
   const query = useQuery({ queryKey: ['customers', q], queryFn: () => api<Page<Customer>>(`/customers?q=${encodeURIComponent(q)}`) });
   return <>
     <PageHeader sub="Khách quen và lịch sử của họ">Khách hàng</PageHeader>
-    <Input.Search size="large" placeholder="Tên hoặc số điện thoại" allowClear onSearch={setQ}/>
+    <Input.Search
+      size="large"
+      placeholder="Tên hoặc số điện thoại"
+      allowClear
+      enterButton="Tìm"
+      onSearch={setQ}
+    />
     <div className="panel">
       {query.isLoading
         ? <div className="center"><Spin/></div>

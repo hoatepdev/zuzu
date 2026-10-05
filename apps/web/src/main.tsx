@@ -1,4 +1,3 @@
-import "@ant-design/v5-patch-for-react-19";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
@@ -52,6 +51,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         components: {
           Button: {
             fontWeight: 600,
+            contentFontSizeLG: 16,
             controlHeightLG: 54,
             primaryShadow: "none",
             defaultShadow: "none",

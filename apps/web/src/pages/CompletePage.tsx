@@ -11,8 +11,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Popconfirm,
-  Select,
 } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -96,19 +94,26 @@ export function CompletePage() {
   });
 
   useEffect(() => {
-    if (!order.data || initialized.current) return;
+    if (!order.data || !services.data || initialized.current) return;
     initialized.current = true;
     form.setFieldsValue({
-      items: order.data.items.map((item) => ({
-        id: item.id,
-        serviceId: item.serviceId,
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        priceAdjustmentReason: item.priceAdjustmentReason ?? undefined,
-      })),
+      items: order.data.items.length
+        ? order.data.items.map((item) => ({
+            id: item.id,
+            serviceId: item.serviceId,
+            quantity: Number(item.quantity),
+            unitPrice: Number(item.unitPrice),
+            priceAdjustmentReason: item.priceAdjustmentReason ?? undefined,
+          }))
+        : order.data.receivedServices.map(({ serviceId }) => ({
+            serviceId,
+            quantity:
+              serviceById.get(serviceId)?.unit === "KG" ? undefined : 1,
+            unitPrice: Number(serviceById.get(serviceId)?.price ?? 0),
+          })),
       discount: Number(order.data.discount ?? 0),
     });
-  }, [form, order.data]);
+  }, [form, order.data, serviceById, services.data]);
 
   if (order.isLoading || services.isLoading)
     return (
@@ -126,7 +131,11 @@ export function CompletePage() {
   const addService = (serviceId: string, add: (item?: ItemForm) => void, nextIndex: number) => {
     const service = serviceById.get(serviceId);
     if (!service) return;
-    add({ serviceId, quantity: 1, unitPrice: Number(service.price) });
+    add({
+      serviceId,
+      quantity: service.unit === "KG" ? undefined : 1,
+      unitPrice: Number(service.price),
+    });
     setShowServicePicker(false);
     setExpandedIndex(nextIndex);
   };
@@ -176,12 +185,15 @@ export function CompletePage() {
             expectedUpdatedAt: order.data!.updatedAt,
           })
         }
+        onFinishFailed={({ errorFields }) => {
+          const itemIndex = errorFields[0]?.name[1];
+          if (typeof itemIndex === "number") setExpandedIndex(itemIndex);
+        }}
       >
         <Form.List name="items">
           {(fields, { add, remove }) => (
             <section className="item-editor-list">
               <div className="section-heading">
-                <strong>Dịch vụ &amp; giá</strong>
                 <small>Chạm một dòng để sửa</small>
               </div>
               {fields.map((field) => {
@@ -209,9 +221,9 @@ export function CompletePage() {
                     <Form.Item name={[field.name, "id"]} hidden>
                       <Input />
                     </Form.Item>
-                    {!expanded ? (
-                      <button
-                        className="service-summary"
+                    <button
+                      hidden={expanded}
+                      className="service-summary"
                         type="button"
                         onClick={() => setExpandedIndex(field.name)}
                         aria-label={`Sửa ${service?.name ?? "dịch vụ"}`}
@@ -227,20 +239,21 @@ export function CompletePage() {
                         </span>
                         <Money value={lineTotal} />
                       </button>
-                    ) : (
-                      <div className="item-editor-focus">
+                      <div className="item-editor-focus" hidden={!expanded}>
                         <Form.Item
                           name={[field.name, "serviceId"]}
                           label="Dịch vụ"
                           rules={[{ required: true, message: "Chọn dịch vụ" }]}
                         >
-                          <Select
-                            size="large"
-                            options={services.data?.map((option) => ({
-                              value: option.id,
-                              label: `${option.name} · ${money(option.price)}đ/${unitLabel(option.unit)}`,
-                            }))}
-                            onChange={(serviceId) => {
+                          <select
+                            className="service-select"
+                            value={current.serviceId ?? ""}
+                            onChange={(event) => {
+                              const serviceId = event.target.value;
+                              form.setFieldValue(
+                                ["items", field.name, "serviceId"],
+                                serviceId,
+                              );
                               const selected = serviceById.get(serviceId);
                               if (selected) {
                                 form.setFieldValue(
@@ -249,7 +262,14 @@ export function CompletePage() {
                                 );
                               }
                             }}
-                          />
+                          >
+                            {services.data?.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name} · {money(option.price)}đ/
+                                {unitLabel(option.unit)}
+                              </option>
+                            ))}
+                          </select>
                         </Form.Item>
                         <div className="item-editor-grid">
                           <Form.Item
@@ -259,18 +279,18 @@ export function CompletePage() {
                               {
                                 required: true,
                                 type: "number",
-                                min: unit === "KG" ? 0.01 : 1,
+                                min: unit === "KG" ? 0.1 : 1,
                                 message: "Nhập số lượng hợp lệ",
                               },
                             ]}
                           >
                             <InputNumber
-                              autoFocus
+                              autoFocus={expanded}
                               className="quantity-input"
                               size="large"
-                              min={unit === "KG" ? 0.01 : 1}
+                              min={unit === "KG" ? 0.1 : 1}
                               step={unit === "KG" ? 0.1 : 1}
-                              precision={unit === "KG" ? 2 : 0}
+                              precision={unit === "KG" ? 1 : 0}
                               inputMode={unit === "KG" ? "decimal" : "numeric"}
                               addonAfter={unitLabel(unit)}
                               style={{ width: "100%" }}
@@ -334,31 +354,31 @@ export function CompletePage() {
                           </div>
                         )}
                         <div className="item-editor-actions">
-                          <Popconfirm
-                            title="Xoá dịch vụ này?"
-                            okText="Xoá"
-                            cancelText="Quay lại"
-                            onConfirm={() => {
+                          <Button
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            aria-label="Xoá dịch vụ"
+                            onClick={() => {
                               remove(field.name);
                               setExpandedIndex(null);
                             }}
-                          >
-                            <Button
-                              type="text"
-                              danger
-                              icon={<DeleteOutlined />}
-                              aria-label="Xoá dịch vụ"
-                            />
-                          </Popconfirm>
+                          />
                           <Button
                             type="primary"
-                            onClick={() => setExpandedIndex(null)}
+                            onClick={async () => {
+                              try {
+                                await form.validateFields([
+                                  ["items", field.name, "quantity"],
+                                ]);
+                                setExpandedIndex(null);
+                              } catch {}
+                            }}
                           >
                             XONG
                           </Button>
                         </div>
                       </div>
-                    )}
                   </article>
                 );
               })}
@@ -386,7 +406,7 @@ export function CompletePage() {
                 </div>
               )}
               <Button
-                type="dashed"
+                className="add-service-button"
                 size="large"
                 block
                 icon={<PlusOutlined />}

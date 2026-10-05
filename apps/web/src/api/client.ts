@@ -1,5 +1,12 @@
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3100';
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -18,7 +25,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const data = await response.json().catch(() => null) as { message?: string | string[] } | null;
     const message = Array.isArray(data?.message) ? data.message.join(', ') : data?.message;
-    throw new Error(message ?? 'Có lỗi xảy ra');
+    throw new ApiError(message ?? 'Có lỗi xảy ra', response.status);
   }
   const text = await response.text();
   return (text ? JSON.parse(text) : null) as T;

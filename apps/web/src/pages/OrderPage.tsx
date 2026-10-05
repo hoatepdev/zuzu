@@ -1,9 +1,9 @@
-import { PrinterOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, App as AntApp, Button, Input, Modal } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../api/client";
+import { ApiError, api } from "../api/client";
 import { Order } from "../api/types";
 import {
   BottomActionBar,
@@ -25,13 +25,14 @@ export function OrderPage() {
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
   const session = useSession();
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentMethod, setPaymentMethod] = useState("BANK_TRANSFER");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState("");
   const order = useQuery({
     queryKey: ["order", id],
     queryFn: () => api<Order>(`/orders/${id}`),
-    retry: false,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
   const reprint = useMutation({
     mutationFn: () => api(`/orders/${id}/reprint`, { method: "POST" }),
@@ -63,46 +64,70 @@ export function OrderPage() {
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setCancelOpen(false);
+      setReason("");
       message.success("Đã huỷ đơn");
     },
   });
 
+  useEffect(() => {
+    setPaymentMethod("CASH");
+    setCancelOpen(false);
+    setReason("");
+    returnOrder.reset();
+    reprint.reset();
+    cancel.reset();
+  }, [id]);
+
   if (order.isLoading)
     return (
-      <div className="order-loading" role="status">
+      <div className="order-loading" role="status" aria-label="Đang tải đơn">
         <span />
         <span />
         <span />
       </div>
     );
-  if (!order.data)
+  if (!order.data) {
+    const notFound =
+      !order.error ||
+      (order.error instanceof ApiError && order.error.status === 404);
     return (
       <EmptyState
-        description={order.error?.message ?? "Không tìm thấy đơn"}
+        description={
+          notFound
+            ? (order.error?.message ?? "Không tìm thấy đơn")
+            : "Không tải được đơn. Kiểm tra mạng rồi thử lại."
+        }
         action={
-          <Link to="/scan">
-            <Button type="primary" size="large">
-              QUÉT LẠI / NHẬP MÃ
+          notFound ? (
+            <Link to="/scan">
+              <Button type="primary" size="large">
+                QUÉT LẠI / NHẬP MÃ
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              type="primary"
+              size="large"
+              onClick={() => void order.refetch()}
+            >
+              THỬ LẠI
             </Button>
-          </Link>
+          )
         }
       />
     );
+  }
   const data = order.data;
   const needsCustomer = data.status === "READY_FOR_PICKUP" && !data.customer;
   const canReturn = data.status === "READY_FOR_PICKUP" && !!data.customer;
+  const hasPrimaryAction =
+    data.status === "PROCESSING" || needsCustomer || canReturn;
 
   return (
-    <div
-      className={
-        data.status === "PROCESSING" || data.status === "READY_FOR_PICKUP"
-          ? "has-bottom-action"
-          : ""
-      }
-    >
+    <div className="has-bottom-action">
       {data.printJobs[0]?.status === "FAILED" && (
         <Alert
-          className="customer-match"
+          className="page-alert"
           type="error"
           message="In bill thất bại sau 3 lần thử"
           description={data.printJobs[0].lastError}
@@ -111,7 +136,7 @@ export function OrderPage() {
       )}
       {data.notifications[0]?.status === "ERROR" && (
         <Alert
-          className="customer-match"
+          className="page-alert"
           type="error"
           message="Gửi Zalo thất bại"
           description={data.notifications[0].error}
@@ -120,31 +145,44 @@ export function OrderPage() {
       )}
       {returnOrder.error && (
         <Alert
-          className="customer-match"
+          className="page-alert"
           type="error"
           message={returnOrder.error.message}
           showIcon
+          closable
+          onClose={() => returnOrder.reset()}
         />
       )}
       {reprint.error && (
         <Alert
-          className="customer-match"
+          className="page-alert"
           type="error"
           message={reprint.error.message}
           showIcon
+          closable
+          onClose={() => reprint.reset()}
         />
       )}
 
       <section className="order-hero">
         <div className="oh-top">
-          <h1 className="oh-code">{data.code}</h1>
+          <div className="oh-title">
+            <Link
+              className="order-back-link"
+              to="/orders"
+              aria-label="Quay lại danh sách đơn"
+            >
+              <ArrowLeftOutlined aria-hidden="true" />
+            </Link>
+            <h1 className="oh-code">{data.code}</h1>
+          </div>
           <StatusBadge status={data.status} />
         </div>
         {data.customer ? (
           <div className="oh-customer">
             <span>Khách hàng</span>
             <strong>{data.customer.name ?? "Khách hàng"}</strong>
-            <small>{maskPhone(data.customer.phone)}</small>
+            <small>{data.customer.phone}</small>
           </div>
         ) : (
           <div className="oh-unknown">
@@ -160,7 +198,11 @@ export function OrderPage() {
         <div className="order-metrics">
           <div className="order-metric">
             <span>Khối lượng</span>
-            <strong>{data.weight && Number(data.weight) > 0 ? `${data.weight} kg` : "Không tính theo kg"}</strong>
+            <span>
+              {data.weight && Number(data.weight) > 0
+                ? `${data.weight} kg`
+                : "—"}
+            </span>
           </div>
           <div className="order-metric amount">
             <span>{canReturn ? "Cần thanh toán" : "Thành tiền"}</span>
@@ -174,22 +216,94 @@ export function OrderPage() {
           <span>Nhận lúc</span>
           <strong>{new Date(data.createdAt).toLocaleString("vi-VN")}</strong>
         </div>
-        {(data.dueDate || data.duePeriod) && <div className="detail-row"><span>Hẹn trả</span><strong>{[data.dueDate && new Date(data.dueDate).toLocaleDateString("vi-VN"), data.duePeriod === "MORNING" ? "Sáng" : data.duePeriod === "AFTERNOON" ? "Chiều" : ""].filter(Boolean).join(" · ")}</strong></div>}
-        {data.deliveryAddress && <div className="detail-row detail-row-stack"><span>Giao đến</span><strong>{data.deliveryAddress}</strong></div>}
+        {data.status === "COMPLETED" && (
+          <div className="detail-row">
+            <span>Trả lúc</span>
+            <strong>
+              {data.completedAt
+                ? new Date(data.completedAt).toLocaleString("vi-VN")
+                : "—"}
+            </strong>
+          </div>
+        )}
+        {(data.dueDate || data.duePeriod) && (
+          <div className="detail-row">
+            <span>Hẹn trả</span>
+            <strong>
+              {[
+                data.dueDate &&
+                  new Date(data.dueDate).toLocaleDateString("vi-VN"),
+                data.duePeriod === "MORNING"
+                  ? "Sáng"
+                  : data.duePeriod === "AFTERNOON"
+                    ? "Chiều"
+                    : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </strong>
+          </div>
+        )}
+        {data.deliveryAddress && (
+          <div className="detail-row detail-row-stack delivery-row">
+            <span>Giao đến</span>
+            <strong>{data.deliveryAddress}</strong>
+          </div>
+        )}
         <div className="detail-row detail-row-stack">
           <span>Dịch vụ</span>
           <div className="order-item-lines">
-            {data.items.length ? data.items.map((item) => (
-              <div className="order-item-line" key={item.id}>
-                <span>{item.serviceName} · {item.quantity} {item.unit === "KG" ? "kg" : item.unit === "PAIR" ? "đôi" : "món"}</span>
-                <strong><Money value={item.lineTotal} /></strong>
-                {item.unitPrice !== item.baseUnitPrice && <small>Giá bảng {Number(item.baseUnitPrice).toLocaleString("vi-VN")}đ · áp dụng {Number(item.unitPrice).toLocaleString("vi-VN")}đ</small>}
+            {data.items.length ? (
+              data.items.map((item) => (
+                <div className="order-item-line" key={item.id}>
+                  <span>
+                    {item.serviceName} · {item.quantity}{" "}
+                    {item.unit === "KG"
+                      ? "kg"
+                      : item.unit === "PAIR"
+                        ? "đôi"
+                        : "món"}
+                  </span>
+                  <strong>
+                    <Money value={item.lineTotal} />
+                  </strong>
+                  {item.unitPrice !== item.baseUnitPrice && (
+                    <small>
+                      Giá bảng{" "}
+                      {Number(item.baseUnitPrice).toLocaleString("vi-VN")}đ · áp
+                      dụng {Number(item.unitPrice).toLocaleString("vi-VN")}đ
+                    </small>
+                  )}
+                </div>
+              ))
+            ) : data.receivedServices.length ? (
+              data.receivedServices.map((service) => (
+                <div className="order-item-line" key={service.serviceId}>
+                  <span>□ {service.serviceName}</span>
+                  <small>Chưa cân / chưa tính giá</small>
+                </div>
+              ))
+            ) : (
+              <div className="order-item-empty">
+                Chưa có dịch vụ hoặc chưa cập nhật giá
               </div>
-            )) : data.receivedServices.length ? data.receivedServices.map((service) => <div className="order-item-line" key={service.serviceId}><span>□ {service.serviceName}</span><small>Chưa cân / chưa tính giá</small></div>) : <strong>Chưa chọn</strong>}
+            )}
           </div>
         </div>
-        <div className="detail-row"><span>Tạm tính</span><strong><Money value={data.subtotal} /></strong></div>
-        <div className="detail-row"><span>Giảm giá</span><strong><Money value={data.discount} /></strong></div>
+        <div className="detail-row">
+          <span>Tạm tính</span>
+          <strong>
+            <Money value={data.subtotal} />
+          </strong>
+        </div>
+        {Number(data.discount ?? 0) > 0 && (
+          <div className="detail-row">
+            <span>Giảm giá</span>
+            <strong>
+              <Money value={data.discount} />
+            </strong>
+          </div>
+        )}
         {canReturn && (
           <div className="detail-row loyalty-row">
             <span>Điểm sau khi trả đồ</span>
@@ -216,13 +330,14 @@ export function OrderPage() {
           </div>
           <QuickChoice
             className="payment-choice"
+            aria-label="Cách thanh toán"
             optionType="button"
             buttonStyle="solid"
             value={paymentMethod}
             disabled={returnOrder.isPending}
             options={[
-              { label: "Tiền mặt", value: "CASH" },
               { label: "Chuyển khoản", value: "BANK_TRANSFER" },
+              { label: "Tiền mặt", value: "CASH" },
             ]}
             onChange={(event) => setPaymentMethod(event.target.value)}
           />
@@ -230,14 +345,13 @@ export function OrderPage() {
       )}
 
       <div className="order-actions">
-        {data.status === "READY_FOR_PICKUP" &&
-          !data.payments.length && (
-            <Link to={`/orders/${data.code}/complete`}>
-              <Button size="large" block>
-                CHỈNH DỊCH VỤ &amp; GIÁ
-              </Button>
-            </Link>
-          )}
+        {data.status === "READY_FOR_PICKUP" && !data.payments.length && (
+          <Link to={`/orders/${data.code}/complete`}>
+            <Button size="large" block>
+              CHỈNH DỊCH VỤ &amp; GIÁ
+            </Button>
+          </Link>
+        )}
         {session.data?.role !== "STAFF" &&
           ["PROCESSING", "READY_FOR_PICKUP"].includes(data.status) &&
           !data.payments.length && (
@@ -250,50 +364,51 @@ export function OrderPage() {
               HUỶ ĐƠN
             </Button>
           )}
-        <Button
-          size="large"
-          block
-          icon={<PrinterOutlined />}
-          loading={reprint.isPending}
-          disabled={reprint.isPending}
-          onClick={() => reprint.mutate()}
-        >
-          IN LẠI BILL
-        </Button>
       </div>
 
-      {data.status === "PROCESSING" && (
-        <BottomActionBar>
-          <Link to={`/orders/${data.code}/complete`}>
-            <Button type="primary" size="large" block>
-              NHẬP DỊCH VỤ &amp; GIÁ
-            </Button>
-          </Link>
-        </BottomActionBar>
-      )}
-      {needsCustomer && (
-        <BottomActionBar>
-          <Link to={`/orders/${data.code}/attach-customer`}>
-            <Button type="primary" size="large" block>
-              GẮN KHÁCH
-            </Button>
-          </Link>
-        </BottomActionBar>
-      )}
-      {canReturn && (
-        <BottomActionBar>
+      <BottomActionBar>
+        <div className="bottom-action-row">
           <Button
-            type="primary"
+            className={hasPrimaryAction ? "bottom-action-side" : ""}
             size="large"
             block
-            loading={returnOrder.isPending}
-            disabled={returnOrder.isPending}
-            onClick={() => returnOrder.mutate(paymentMethod)}
+            icon={<PrinterOutlined />}
+            loading={reprint.isPending}
+            disabled={reprint.isPending}
+            aria-label="In lại bill"
+            title="In lại bill"
+            onClick={() => reprint.mutate()}
           >
-            {returnOrder.isPending ? "ĐANG TRẢ ĐỒ..." : "TRẢ ĐỒ"}
+            {hasPrimaryAction ? "" : "IN LẠI BILL"}
           </Button>
-        </BottomActionBar>
-      )}
+          {data.status === "PROCESSING" && (
+            <Link to={`/orders/${data.code}/complete`}>
+              <Button type="primary" size="large" block>
+                NHẬP DỊCH VỤ &amp; GIÁ
+              </Button>
+            </Link>
+          )}
+          {needsCustomer && (
+            <Link to={`/orders/${data.code}/attach-customer`}>
+              <Button type="primary" size="large" block>
+                GẮN KHÁCH
+              </Button>
+            </Link>
+          )}
+          {canReturn && (
+            <Button
+              type="primary"
+              size="large"
+              block
+              loading={returnOrder.isPending}
+              disabled={returnOrder.isPending}
+              onClick={() => returnOrder.mutate(paymentMethod)}
+            >
+              {returnOrder.isPending ? "ĐANG TRẢ ĐỒ..." : "TRẢ ĐỒ"}
+            </Button>
+          )}
+        </div>
+      </BottomActionBar>
 
       <Modal
         title="Huỷ đơn"
@@ -305,12 +420,20 @@ export function OrderPage() {
         okButtonProps={{ danger: true, disabled: reason.trim().length < 3 }}
         confirmLoading={cancel.isPending}
       >
+        <label htmlFor="cancel-reason" className="sr-only">
+          Lý do huỷ
+        </label>
         <Input.TextArea
+          id="cancel-reason"
           rows={3}
-          placeholder="Lý do huỷ"
+          placeholder="Lý do huỷ (tối thiểu 3 ký tự)"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
+          aria-describedby="cancel-reason-hint"
         />
+        <small id="cancel-reason-hint" className="cancel-reason-hint">
+          Tối thiểu 3 ký tự
+        </small>
       </Modal>
     </div>
   );

@@ -26,7 +26,7 @@ export function Money({
 }) {
   return (
     <span className={`money ${className}`.trim()}>
-      {value == null ? "—" : `${Number(value).toLocaleString("vi-VN")}đ`}
+      {value == null ? "-" : `${Number(value).toLocaleString("vi-VN")}đ`}
     </span>
   );
 }

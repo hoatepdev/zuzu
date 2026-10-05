@@ -33,7 +33,10 @@ const addDays = (value: string, days: number) => {
 };
 const INVALID_DUE_DATE = "Ngày hẹn trả không hợp lệ";
 const PAST_DUE_DATE = "Ngày hẹn trả phải là hôm nay hoặc ngày sau đó";
-type DueDateResult = { value: string; display: string } | { error: string } | null;
+type DueDateResult =
+  | { value: string; display: string }
+  | { error: string }
+  | null;
 
 const calendarDate = (year: number, month: number, day: number) => {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
@@ -85,8 +88,8 @@ export function ReceivePage() {
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
   const [unknown, setUnknown] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [lookup, setLookup] = useState("");
+  const [customerInput, setCustomerInput] = useState("");
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [defaultApplied, setDefaultApplied] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>();
   const [newCustomer, setNewCustomer] = useState(false);
@@ -100,14 +103,16 @@ export function ReceivePage() {
   });
 
   const customers = useQuery({
-    queryKey: ["customers", "receive-lookup", lookup],
+    queryKey: ["customers", "receive-lookup", customerSearchQuery],
     queryFn: () =>
-      api<Customer[]>(`/customers/search?q=${encodeURIComponent(lookup)}`),
-    enabled: !unknown && lookup.length > 0,
+      api<Customer[]>(
+        `/customers/search?q=${encodeURIComponent(customerSearchQuery)}`,
+      ),
+    enabled: !unknown && customerSearchQuery.length > 0,
   });
 
   useEffect(() => {
-    const value = phone.trim();
+    const value = customerInput.trim();
     const digits = normalizePhone(value).replace(/\D/g, "");
     if (
       unknown ||
@@ -115,15 +120,21 @@ export function ReceivePage() {
       !value ||
       (isPhoneLike(value) && digits.length < 3)
     ) {
-      setLookup("");
+      setCustomerSearchQuery("");
       return;
     }
-    const timer = window.setTimeout(() => setLookup(isPhoneLike(value) ? normalizePhone(value) : value), 350);
+    const timer = window.setTimeout(
+      () =>
+        setCustomerSearchQuery(
+          isPhoneLike(value) ? normalizePhone(value) : value,
+        ),
+      350,
+    );
     return () => window.clearTimeout(timer);
-  }, [phone, unknown, newCustomer]);
+  }, [customerInput, unknown, newCustomer]);
 
-  const addingPhone = isPhoneInput(phone);
-  const addingName = isValidCustomerName(phone) && !addingPhone;
+  const addingPhone = isPhoneInput(customerInput);
+  const addingName = isValidCustomerName(customerInput) && !addingPhone;
 
   useEffect(() => {
     if (!services.data || defaultApplied) return;
@@ -137,7 +148,7 @@ export function ReceivePage() {
 
   const create = useMutation({
     mutationFn: (values: {
-      phone?: string;
+      customerLookup?: string;
       customerName?: string;
       newCustomerPhone?: string;
       customNote?: string;
@@ -152,16 +163,16 @@ export function ReceivePage() {
             : (selectedCustomer?.phone ??
               (newCustomer
                 ? addingPhone
-                  ? normalizePhone(values.phone ?? "")
+                  ? normalizePhone(values.customerLookup ?? "")
                   : normalizePhone(values.newCustomerPhone ?? "")
-                : isPhoneLike(values.phone?.trim() ?? "")
-                  ? normalizePhone(values.phone ?? "")
+                : isPhoneLike(values.customerLookup?.trim() ?? "")
+                  ? normalizePhone(values.customerLookup ?? "")
                   : undefined)),
           customerId: newCustomer ? undefined : selectedCustomer?.id,
           customerName: newCustomer
             ? addingPhone
               ? values.customerName
-              : values.phone
+              : values.customerLookup
             : undefined,
           customerAddress: selectedCustomer?.address,
           note:
@@ -186,13 +197,13 @@ export function ReceivePage() {
   const chooseCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setNewCustomer(false);
-    setPhone(customer.phone);
+    setCustomerInput(customer.phone);
     form.setFieldsValue({
-      phone: customer.phone,
+      customerLookup: customer.phone,
       customerName: customer.name,
       deliveryAddress: customer.address,
     });
-    setLookup("");
+    setCustomerSearchQuery("");
   };
   const toggleService = (serviceId: string) => {
     setSelectedServices((current) =>
@@ -270,40 +281,45 @@ export function ReceivePage() {
           </div>
           {!unknown ? (
             <>
-              <Form.Item
-                name="phone"
-                label="Khách hàng"
-                rules={[
-                  {
-                    required: true,
-                    message: "Nhập số điện thoại hoặc tên khách",
-                  },
-                ]}
-              >
-                <Input
-                  autoFocus
-                  autoComplete="off"
-                  size="large"
-                  placeholder="Nhập số điện thoại hoặc tên khách"
-                  disabled={newCustomer || create.isPending}
-                  onChange={(event) => {
-                    setPhone(event.target.value);
-                    setNewCustomer(false);
-                    if (
-                      selectedCustomer &&
-                      normalizePhone(event.target.value) !==
-                        selectedCustomer.phone
-                    )
-                      setSelectedCustomer(undefined);
-                  }}
-                />
-              </Form.Item>
+              <div className="customer-lookup">
+                <Form.Item
+                  name="customerLookup"
+                  label="Khách hàng"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Nhập số điện thoại hoặc tên khách",
+                    },
+                  ]}
+                >
+                  <Input
+                    autoFocus
+                    autoComplete="off"
+                    size="large"
+                    placeholder="Nhập số điện thoại hoặc tên khách"
+                    disabled={newCustomer || create.isPending}
+                    onChange={(event) => {
+                      setCustomerInput(event.target.value);
+                      setNewCustomer(false);
+                      if (
+                        selectedCustomer &&
+                        normalizePhone(event.target.value) !==
+                          selectedCustomer.phone
+                      )
+                        setSelectedCustomer(undefined);
+                    }}
+                  />
+                </Form.Item>
+              </div>
+
               {customers.isFetching && (
                 <div className="lookup-state" role="status">
                   <Spin size="small" /> Đang tìm khách...
                 </div>
               )}
-              {lookup && customers.data?.length && !selectedCustomer ? (
+              {customerSearchQuery &&
+              customers.data?.length &&
+              !selectedCustomer ? (
                 <div
                   className="customer-suggestions"
                   role="listbox"
@@ -323,7 +339,7 @@ export function ReceivePage() {
                     </button>
                   ))}
                 </div>
-              ) : lookup &&
+              ) : customerSearchQuery &&
                 !customers.isFetching &&
                 !customers.data?.length &&
                 (addingPhone || addingName) ? (
@@ -336,9 +352,11 @@ export function ReceivePage() {
                       setNewCustomer(true);
                       form.setFieldsValue({
                         newCustomerPhone: addingPhone
-                          ? normalizePhone(phone)
+                          ? normalizePhone(customerInput)
                           : undefined,
-                        customerName: addingPhone ? undefined : phone.trim(),
+                        customerName: addingPhone
+                          ? undefined
+                          : customerInput.trim(),
                       });
                     }}
                   >
@@ -453,7 +471,9 @@ export function ReceivePage() {
               format={["DD/MM/YYYY", "DDMM", "D/M/YYYY"]}
               placeholder="DD/MM/YYYY hoặc DDMM hoặc ngày"
               preserveInvalidOnBlur
-              disabledDate={(current) => current.format("YYYY-MM-DD") < todayVN()}
+              disabledDate={(current) =>
+                current.format("YYYY-MM-DD") < todayVN()
+              }
               onBlur={(event) => {
                 const input = event.target;
                 if (!(input instanceof HTMLInputElement)) return;
@@ -479,11 +499,7 @@ export function ReceivePage() {
             ].map((option) => (
               <Button
                 key={option.label}
-                type={
-                  selectedDueDate === option.value
-                    ? "primary"
-                    : "default"
-                }
+                type={selectedDueDate === option.value ? "primary" : "default"}
                 onClick={() => {
                   form.setFields([
                     { name: "dueDate", value: option.value, errors: [] },

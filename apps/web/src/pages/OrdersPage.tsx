@@ -94,7 +94,7 @@ export function OrdersPage() {
           size="large"
           placeholder="Mã đơn, SĐT, tên khách"
           allowClear
-          enterButton="Tìm"
+          enterButton="Tìm đơn"
           onSearch={(value) => {
             if (management) {
               setSearch(value);

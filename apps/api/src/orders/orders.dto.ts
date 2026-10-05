@@ -17,7 +17,7 @@ export class CreateOrderDto {
 export class CompleteOrderItemDto {
   @IsOptional() @IsString() id?: string;
   @IsString() @IsNotEmpty() serviceId!: string;
-  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) quantity!: number;
+  @Type(() => Number) @IsNumber({ maxDecimalPlaces: 1 }) @Min(0.1) quantity!: number;
   @IsOptional() @Type(() => Number) @IsNumber({ maxDecimalPlaces: 0 }) @Min(0) unitPrice?: number;
   @IsOptional() @IsString() priceAdjustmentReason?: string | null;
 }

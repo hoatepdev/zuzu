@@ -116,10 +116,7 @@ export function HomePage() {
             </Link>
           </section>
 
-          <section
-            className="home-status"
-            aria-labelledby="home-status-title"
-          >
+          <section className="home-status" aria-labelledby="home-status-title">
             <h2 id="home-status-title" className="sr-only">
               Tình trạng đơn hàng
             </h2>
@@ -141,7 +138,12 @@ export function HomePage() {
         <section className="home-recent" aria-labelledby="recent-orders-title">
           <div className="home-recent-head">
             <h2 id="recent-orders-title">Đơn gần đây</h2>
-            <Link to="/orders">Xem tất cả</Link>
+            <div className="home-recent-links">
+              <Link to="/orders">Xem tất cả</Link>
+              <Link to="/expenses/new" className="home-utility">
+                <DollarOutlined /> <span>Chi tiền</span>
+              </Link>
+            </div>
           </div>
           {recent.isLoading ? (
             <div className="home-state" role="status" aria-live="polite">
@@ -166,10 +168,6 @@ export function HomePage() {
           ) : (
             <EmptyState description="Chưa có đơn nào trong ngày" />
           )}
-
-          <Link to="/expenses/new" className="home-utility">
-            <DollarOutlined /> Chi tiền
-          </Link>
         </section>
       </div>
     </div>

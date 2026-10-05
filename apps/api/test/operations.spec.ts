@@ -4,6 +4,7 @@ import { validate } from 'class-validator';
 import { CustomersService } from '../src/customers/customers.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
 import { CreateOrderDto } from '../src/orders/orders.dto';
+import { UpdateCustomerDto } from '../src/customers/customers.dto';
 import { OrdersService } from '../src/orders/orders.service';
 import { PrintingService } from '../src/printing/printing.service';
 import { PrismaService } from '../src/prisma.service';
@@ -23,6 +24,7 @@ let customerId: string;
 let customer2Id: string;
 let receiveCustomerId: string;
 const orderIds: string[] = [];
+const extraCustomerIds: string[] = [];
 
 beforeAll(async () => {
   await prisma.storeSetting.upsert({ where: { key: 'LOYALTY_VND_PER_POINT' }, update: { value: '10000' }, create: { key: 'LOYALTY_VND_PER_POINT', value: '10000' } });
@@ -40,6 +42,7 @@ afterAll(async () => {
   if (customerId) await prisma.customer.delete({ where: { id: customerId } });
   if (customer2Id) await prisma.customer.delete({ where: { id: customer2Id } });
   if (receiveCustomerId) await prisma.customer.delete({ where: { id: receiveCustomerId } });
+  await prisma.customer.deleteMany({ where: { id: { in: extraCustomerIds } } });
   await prisma.service.delete({ where: { id: serviceId } });
   await prisma.user.delete({ where: { id: managerId } });
   await prisma.$disconnect();
@@ -87,8 +90,30 @@ it('preserves customer names and service snapshots while exposing CRM history', 
   const detail = await customers.get(customerId);
   expect(detail.orders).toHaveLength(2);
   expect(detail.loyalty[0].points).toBe(3);
-  const updated = await customers.update(customerId, { note: 'Ưu tiên ít thơm', marketingOptIn: true }, managerId);
+  const newPhone = `${phone.slice(0, -1)}${phone.endsWith('9') ? '8' : '9'}`;
+  const updatedPhone = `+84 ${newPhone.slice(1, 4)} ${newPhone.slice(4, 7)} ${newPhone.slice(7)}`;
+  const updated = await customers.update(customerId, { phone: updatedPhone, name: 'Tên mới', note: 'Ưu tiên ít thơm', marketingOptIn: true }, managerId);
+  expect(updated.phone).toBe(newPhone);
+  expect(updated.nameNormalized).toBe('ten moi');
   expect(updated.note).toBe('Ưu tiên ít thơm');
+  expect((await customers.search('tên mới'))[0].id).toBe(customerId);
+  const audit = await prisma.auditLog.findFirstOrThrow({ where: { entityId: customerId, action: 'CUSTOMER_UPDATED' }, orderBy: { createdAt: 'desc' } });
+  expect(audit.before).toMatchObject({ phone, name: 'Tên đúng' });
+  expect(audit.after).toMatchObject({ phone: newPhone, name: 'Tên mới' });
+});
+
+it('rejects duplicate and invalid customer phone updates', async () => {
+  const firstPhone = `07${suffix.slice(-8)}`;
+  const secondPhone = `06${suffix.slice(-8)}`;
+  const first = await orders.create({ phone: firstPhone, customerUnknown: false }, managerId); orderIds.push(first.id);
+  const second = await orders.create({ phone: secondPhone, customerUnknown: false }, managerId); orderIds.push(second.id);
+  extraCustomerIds.push(first.customerId!, second.customerId!);
+  const auditCount = await prisma.auditLog.count({ where: { entityId: first.customerId!, action: 'CUSTOMER_UPDATED' } });
+  await expect(customers.update(first.customerId!, { phone: secondPhone }, managerId)).rejects.toThrow('Số điện thoại đã tồn tại');
+  expect((await prisma.customer.findUniqueOrThrow({ where: { id: first.customerId! } })).phone).toBe(firstPhone);
+  expect(await prisma.auditLog.count({ where: { entityId: first.customerId!, action: 'CUSTOMER_UPDATED' } })).toBe(auditCount);
+  const errors = await validate(plainToInstance(UpdateCustomerDto, { phone: '123' }));
+  expect(errors.some((error) => error.property === 'phone')).toBe(true);
 });
 
 it('persists receive metadata without priced items and preserves it on reprint', async () => {
