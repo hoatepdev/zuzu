@@ -4,7 +4,7 @@ export type OrderStatus =
   | "READY_FOR_PICKUP"
   | "COMPLETED"
   | "CANCELLED";
-export type User = { id: string; username: string; name: string; role: Role };
+export type User = { id: string; username: string; name: string; phone?: string; role: Role };
 export type UserAccount = { id: string; username: string; phone?: string; name: string; role: Role; active: boolean; createdAt: string };
 export type Customer = {
   id: string;

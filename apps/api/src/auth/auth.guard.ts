@@ -13,9 +13,9 @@ export class AuthGuard implements CanActivate {
     let session: SessionUser;
     try { session = await this.jwt.verifyAsync<SessionUser>(token); }
     catch { throw new UnauthorizedException('Phiên đăng nhập đã hết hạn'); }
-    const user = await this.prisma.user.findUnique({ where: { id: session.id }, select: { id: true, username: true, name: true, role: true, active: true } });
+    const user = await this.prisma.user.findUnique({ where: { id: session.id }, select: { id: true, username: true, name: true, phone: true, role: true, active: true } });
     if (!user?.active) throw new UnauthorizedException('Tài khoản đã bị vô hiệu hoá');
-    request.user = { id: user.id, username: user.username, name: user.name, role: user.role };
+    request.user = { id: user.id, username: user.username, name: user.name, phone: user.phone ?? undefined, role: user.role };
     return true;
   }
 }
