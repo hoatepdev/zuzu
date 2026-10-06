@@ -4,6 +4,7 @@ import {
   History,
   Home,
   LayoutDashboard,
+  PackagePlus,
   PanelLeft,
   ScanLine,
   ScrollText,
@@ -56,6 +57,7 @@ const mobileKeyFor = (pathname: string, items: typeof staffMobileItems) =>
 
 const operations = [
   { key: "/dashboard", icon: <LayoutDashboard />, text: "Tổng quan" },
+  { key: "/receive", icon: <PackagePlus />, text: "Nhận đồ" },
   { key: "/orders", icon: <ScrollText />, text: "Đơn hàng" },
   { key: "/customers", icon: <Users />, text: "Khách hàng" },
   { key: "/expenses", icon: <Banknote />, text: "Chi phí" },

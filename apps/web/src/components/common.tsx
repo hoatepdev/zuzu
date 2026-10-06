@@ -77,7 +77,7 @@ export function NumberInput({
   decimal?: boolean;
   quickThousand?: boolean;
   suffix?: string;
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "suffix">) {
+} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "suffix" | "type">) {
   const inputRef = useRef<HTMLInputElement>(null);
   const readValue = () => {
     const raw = inputRef.current?.value.trim();
@@ -96,7 +96,7 @@ export function NumberInput({
   return (
     <span className={`amount-shell ${className}`.trim()}>
       <NumericFormat
-        {...props}
+        {...(props as ComponentProps<typeof NumericFormat>)}
         getInputRef={inputRef}
         customInput={Input}
         inputMode={decimal ? "decimal" : "numeric"}
@@ -588,16 +588,19 @@ export function Pager({
 export function Metric({
   label,
   hero = false,
+  detail,
   children,
 }: {
   label: string;
   hero?: boolean;
+  detail?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className={`metric ${hero ? "metric-hero" : ""}`.trim()}>
       <span className="metric-label">{label}</span>
       <strong className="metric-value">{children}</strong>
+      {detail && <span className="metric-detail">{detail}</span>}
     </div>
   );
 }

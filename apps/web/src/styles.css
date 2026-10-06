@@ -1878,6 +1878,42 @@ h3 {
 }
 .chart-dot.revenue { background: var(--chart-revenue); }
 .chart-dot.expenses { background: var(--chart-expenses); }
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.chart-tooltip b {
+  display: block;
+  margin-bottom: 4px;
+}
+.chart-tooltip p {
+  margin: 2px 0;
+  font-weight: 600;
+}
+.range-presets {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+.metric-detail {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.metric-hero .metric-detail {
+  color: rgba(255, 253, 246, 0.8);
+}
+@media (max-width: 479px) {
+  .range-presets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .zalo-settings {
   max-width: 680px;
 }

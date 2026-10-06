@@ -50,7 +50,7 @@ ZUZU dùng `zca-js`, một unofficial API cho tài khoản Zalo cá nhân. Zalo 
 - Không có trạng thái washing/drying/folding; bill giấy quản lý luồng vật lý.
 - Receipt hiện lưu URL, chưa upload file trực tiếp.
 - Không hỗ trợ refund/void payment đã thu, sửa đơn đã COMPLETED hoặc restatement ca đã chốt.
-- Dashboard nâng cao dạng biểu đồ chưa nằm trong Phase 1.
+- Dashboard có biểu đồ doanh thu/chi phí theo ngày, bộ lọc nhanh (hôm nay / 7 ngày / 30 ngày / tháng này) và so sánh với kỳ trước.
 - Bảng giá dùng deactivate thay vì delete để giữ lịch sử đơn; mỗi đơn Phase 1 hiện có một service.
 - Owner hiện dùng được toàn bộ tính năng vận hành và quản lý; giới hạn Staff/Manager giữ nguyên để dùng lại khi có thêm người vận hành.
 - Quản lý nhân viên chỉ dành cho Owner; khoá tài khoản có hiệu lực ngay ở request kế tiếp.

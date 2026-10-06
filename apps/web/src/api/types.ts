@@ -77,6 +77,22 @@ export type Shift = {
   actualCash?: string;
   difference?: string;
 };
+export type DashboardDailyPoint = {
+  date: string;
+  revenue: string;
+  expenses: string;
+  estimatedProfit: string;
+  orders: number;
+  kg: string;
+};
+
+export type DashboardPrevious = {
+  revenue: string;
+  expenses: string;
+  estimatedProfit: string;
+  orders: number;
+};
+
 export type Dashboard = {
   revenue: string;
   expenses: string;
@@ -90,6 +106,8 @@ export type Dashboard = {
   unpaid: string;
   newCustomers: number;
   returningCustomers: number;
+  daily: DashboardDailyPoint[];
+  previous: DashboardPrevious;
 };
 export type AuditLog = {
   id: string;

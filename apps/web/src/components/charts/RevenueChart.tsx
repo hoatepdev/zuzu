@@ -1,15 +1,17 @@
+import { useReducedMotion } from "motion/react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
 } from "recharts";
 
 export type RevenuePoint = {
-  label: string;
+  date: string;
   revenue: number;
   expenses?: number;
 };
@@ -19,8 +21,25 @@ type RevenueChartProps = {
 };
 
 const formatMoney = (value: number) => `${value.toLocaleString("vi-VN")}đ`;
+const dayMonth = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+const fullDate = (date: string) => `${dayMonth(date)}/${date.slice(0, 4)}`;
+
+function ChartTooltip({ active, payload, label }: TooltipContentProps) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <b>{fullDate(String(label))}</b>
+      {payload.map((entry) => (
+        <p key={entry.name} style={{ color: entry.color }}>
+          {entry.name}: {formatMoney(Number(entry.value ?? 0))}
+        </p>
+      ))}
+    </div>
+  );
+}
 
 export function RevenueChart({ data }: RevenueChartProps) {
+  const reduceMotion = useReducedMotion();
   if (!data.length) {
     return (
       <div className="chart-empty" role="status">
@@ -41,11 +60,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
             </linearGradient>
           </defs>
           <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="date" tickFormatter={dayMonth} interval="preserveStartEnd" minTickGap={24} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} />
           <YAxis tickFormatter={formatMoney} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} axisLine={false} tickLine={false} width={72} />
-          <Tooltip formatter={(value) => formatMoney(Number(value))} />
-          <Area type="monotone" dataKey="revenue" name="Doanh thu" stroke="var(--chart-revenue)" fill="url(#revenue-fill)" strokeWidth={2} />
-          {hasExpenses && <Area type="monotone" dataKey="expenses" name="Chi phí" stroke="var(--chart-expenses)" fill="none" strokeWidth={2} />}
+          <Tooltip content={(props) => <ChartTooltip {...props} />} cursor={{ stroke: "var(--chart-grid)" }} />
+          <Area type="monotone" dataKey="revenue" name="Doanh thu" stroke="var(--chart-revenue)" fill="url(#revenue-fill)" strokeWidth={2} isAnimationActive={!reduceMotion} />
+          {hasExpenses && <Area type="monotone" dataKey="expenses" name="Chi phí" stroke="var(--chart-expenses)" fill="none" strokeWidth={2} isAnimationActive={!reduceMotion} />}
         </AreaChart>
       </ResponsiveContainer>
       {hasExpenses && <div className="chart-legend"><span><i className="chart-dot revenue" />Doanh thu</span><span><i className="chart-dot expenses" />Chi phí</span></div>}
