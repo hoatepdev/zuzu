@@ -1,18 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  App as AntApp,
-  Button,
-  Form,
-  Input,
-  Radio,
-  Select,
-} from "antd";
 import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { EXPENSE_CATEGORIES, Expense } from "../api/types";
-import { AmountInput, BottomActionBar, PageHeader } from "../components/common";
+import {
+  AmountInput,
+  Banner,
+  BottomActionBar,
+  Field,
+  PageHeader,
+  QuickChoice,
+  SelectField,
+  TextField,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
 
 const commonCategories = [
   "Nước giặt / nước xả",
@@ -20,19 +23,24 @@ const commonCategories = [
   "Túi / bao bì",
   "Giấy bill",
 ];
+
+type ExpenseValues = {
+  amount: number;
+  category: string;
+  otherCategory?: string;
+  description: string;
+  paymentMethod: string;
+};
+
 export function ExpenseFormPage() {
-  const { message } = AntApp.useApp();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [category, setCategory] = useState("");
+  const form = useForm<ExpenseValues>({
+    defaultValues: { paymentMethod: "CASH" },
+  });
+  const category = form.watch("category");
   const create = useMutation({
-    mutationFn: (values: {
-      amount: number;
-      category?: string;
-      otherCategory?: string;
-      description: string;
-      paymentMethod: string;
-    }) =>
+    mutationFn: (values: ExpenseValues) =>
       api<Expense>("/expenses", {
         method: "POST",
         body: JSON.stringify({
@@ -46,7 +54,7 @@ export function ExpenseFormPage() {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["expenses"] });
-      message.success("Đã lưu khoản chi");
+      toast.success("Đã lưu khoản chi");
       navigate("/staff");
     },
   });
@@ -57,81 +65,82 @@ export function ExpenseFormPage() {
         Chi tiền
       </PageHeader>
       {create.error && (
-        <Alert
+        <Banner
           className="customer-match"
-          type="error"
-          message={create.error.message}
-          showIcon
+          tone="error"
+          title={create.error.message}
         />
       )}
-      <Form
+      <form
         className="task-form"
-        layout="vertical"
-        initialValues={{ paymentMethod: "CASH" }}
-        onFinish={(values) => create.mutate(values)}
+        onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
-        <Form.Item
+        <Controller
+          control={form.control}
           name="amount"
-          label="Số tiền"
-          rules={[{ required: true, message: "Nhập số tiền" }]}
-        >
-          <AmountInput autoFocus />
-        </Form.Item>
-        <Form.Item
-          name="category"
-          label="Nhóm chi"
-          rules={[{ required: true, message: "Chọn nhóm chi" }]}
-        >
-          <Radio.Group
-            className="quick-choice"
-            options={[...commonCategories, "Khác"]}
-            onChange={(event) => setCategory(event.target.value)}
+          rules={{ required: "Nhập số tiền" }}
+          render={({ field, fieldState }) => (
+            <Field label="Số tiền" htmlFor="amount" error={fieldState.error?.message}>
+              <AmountInput
+                id="amount"
+                autoFocus
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            </Field>
+          )}
+        />
+        <Field label="Nhóm chi">
+          <QuickChoice
+            options={[...commonCategories, "Khác"].map((value) => ({
+              label: value,
+              value,
+            }))}
+            value={form.watch("category")}
+            onChange={(value) => form.setValue("category", value)}
           />
-        </Form.Item>
+        </Field>
         {category === "Khác" && (
-          <Form.Item
+          <SelectField
+            control={form.control}
             name="otherCategory"
             label="Nhóm chi khác"
-            rules={[{ required: true, message: "Chọn nhóm chi" }]}
-          >
-            <Select
-              size="large"
-              options={EXPENSE_CATEGORIES.filter(
-                (value) => !commonCategories.includes(value),
-              ).map((value) => ({ value, label: value }))}
-            />
-          </Form.Item>
+            placeholder="Chọn nhóm chi"
+            options={EXPENSE_CATEGORIES.filter(
+              (value) => !commonCategories.includes(value),
+            ).map((value) => ({ value, label: value }))}
+            rules={{ required: "Chọn nhóm chi" }}
+          />
         )}
-        <Form.Item
+        <TextField
+          control={form.control}
           name="description"
           label="Nội dung"
-          rules={[{ required: true, message: "Nhập nội dung" }]}
-        >
-          <Input size="large" />
-        </Form.Item>
-        <Form.Item name="paymentMethod" label="Thanh toán">
-          <Radio.Group
-            className="quick-choice"
-            optionType="button"
-            buttonStyle="solid"
+          className="input-lg"
+          rules={{ required: "Nhập nội dung" }}
+        />
+        <Field label="Thanh toán">
+          <QuickChoice
             options={[
               { label: "Tiền mặt", value: "CASH" },
               { label: "Chuyển khoản", value: "BANK_TRANSFER" },
             ]}
+            value={form.watch("paymentMethod")}
+            onChange={(value) => form.setValue("paymentMethod", value)}
           />
-        </Form.Item>
+        </Field>
         <BottomActionBar>
           <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={create.isPending}
+            type="submit"
+            size="lg"
+            className="w-full"
+            disabled={create.isPending}
           >
             {create.isPending ? "ĐANG LƯU..." : "LƯU"}
           </Button>
         </BottomActionBar>
-      </Form>
+      </form>
     </div>
   );
 }

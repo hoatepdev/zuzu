@@ -1,43 +1,75 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  App as AntApp,
-  Button,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Select,
-  Switch,
-  Table,
-  Tag,
-} from "antd";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { api } from "../api/client";
 import { UserAccount } from "../api/types";
-import { PageHeader } from "../components/common";
+import {
+  Banner,
+  PageHeader,
+  SelectField,
+  Spinner,
+  TextField,
+} from "../components/common";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+type EditValues = {
+  username: string;
+  name: string;
+  phone?: string;
+  role: string;
+};
+type CreateValues = EditValues & { password: string };
+type ResetValues = { password: string };
+
+const roleLabels: Record<string, string> = {
+  OWNER: "Chủ cửa hàng",
+  MANAGER: "Quản lý",
+  STAFF: "Nhân viên",
+};
 
 export function UsersPage() {
-  const { message } = AntApp.useApp();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<UserAccount | null>(null);
   const [creating, setCreating] = useState(false);
   const [resetting, setResetting] = useState<UserAccount | null>(null);
-  const [form] = Form.useForm();
-  const [createForm] = Form.useForm();
-  const [resetForm] = Form.useForm();
+  const form = useForm<EditValues>();
+  const createForm = useForm<CreateValues>();
+  const resetForm = useForm<ResetValues>();
   const query = useQuery({
     queryKey: ["users"],
     queryFn: () => api<UserAccount[]>("/users"),
   });
   const refresh = () => void qc.invalidateQueries({ queryKey: ["users"] });
   const save = useMutation({
-    mutationFn: (values: {
-      username: string;
-      phone?: string;
-      name: string;
-      role: string;
-      active: boolean;
-    }) =>
+    mutationFn: (values: EditValues) =>
       api(`/users/${editing!.id}`, {
         method: "PATCH",
         body: JSON.stringify(values),
@@ -45,17 +77,11 @@ export function UsersPage() {
     onSuccess: () => {
       setEditing(null);
       refresh();
-      message.success("Đã cập nhật nhân viên");
+      toast.success("Đã cập nhật nhân viên");
     },
   });
   const create = useMutation({
-    mutationFn: (values: {
-      username: string;
-      phone?: string;
-      name: string;
-      role: string;
-      password: string;
-    }) =>
+    mutationFn: (values: CreateValues) =>
       api<UserAccount>("/users", {
         method: "POST",
         body: JSON.stringify(values),
@@ -63,7 +89,7 @@ export function UsersPage() {
     onSuccess: () => {
       setCreating(false);
       refresh();
-      message.success("Đã thêm nhân viên");
+      toast.success("Đã thêm nhân viên");
     },
   });
   const toggle = useMutation({
@@ -74,23 +100,28 @@ export function UsersPage() {
       }),
     onSuccess: () => {
       refresh();
-      message.success("Đã cập nhật");
+      toast.success("Đã cập nhật");
     },
-    onError: (error) => message.error(error.message),
+    onError: (error) => toast.error(error.message),
   });
   const reset = useMutation({
-    mutationFn: (values: { password: string }) =>
+    mutationFn: (values: ResetValues) =>
       api(`/users/${resetting!.id}/reset-password`, {
         method: "POST",
         body: JSON.stringify(values),
       }),
     onSuccess: () => {
       setResetting(null);
-      message.success("Đã đặt lại mật khẩu");
+      toast.success("Đã đặt lại mật khẩu");
     },
   });
   const edit = (user: UserAccount) => {
-    form.setFieldsValue(user);
+    form.reset({
+      username: user.username,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+    });
     setEditing(user);
   };
   return (
@@ -99,9 +130,14 @@ export function UsersPage() {
         sub="Tài khoản đăng nhập của cửa hàng"
         extra={
           <Button
-            type="primary"
             onClick={() => {
-              createForm.resetFields();
+              createForm.reset({
+                username: "",
+                name: "",
+                phone: "",
+                role: "STAFF",
+                password: "",
+              });
               setCreating(true);
             }}
           >
@@ -111,191 +147,262 @@ export function UsersPage() {
       >
         Nhân viên
       </PageHeader>
-      <Table
-        className="management-table"
-        rowKey="id"
-        loading={query.isLoading}
-        dataSource={query.data}
-        pagination={false}
-        scroll={{ x: 820 }}
-        columns={[
-          { title: "Tên đăng nhập", dataIndex: "username" },
-          { title: "Tên", dataIndex: "name" },
-          {
-            title: "SĐT",
-            dataIndex: "phone",
-            render: (value?: string) => value ?? "—",
-          },
-          {
-            title: "Vai trò",
-            dataIndex: "role",
-            render: (role: string) => (
-              <Tag
-                color={
-                  role === "OWNER"
-                    ? "gold"
-                    : role === "MANAGER"
-                      ? "blue"
-                      : undefined
-                }
-              >
-                {role === "OWNER"
-                  ? "Chủ cửa hàng"
-                  : role === "MANAGER"
-                    ? "Quản lý"
-                    : "Nhân viên"}
-              </Tag>
-            ),
-          },
-          {
-            title: "Trạng thái",
-            render: (_, user) => (
-              <Tag color={user.active ? "green" : "default"}>
-                {user.active ? "Đang hoạt động" : "Đã khoá"}
-              </Tag>
-            ),
-          },
-          {
-            title: "",
-            render: (_, user) => (
-              <>
-                <Button size="small" onClick={() => edit(user)}>
-                  Sửa
-                </Button>
-                {user.role !== "OWNER" && (
-                  <Popconfirm
-                    title={
-                      user.active ? "Khoá tài khoản này?" : "Mở lại tài khoản?"
-                    }
-                    onConfirm={() => toggle.mutate(user)}
-                  >
-                    <Button
-                      size="small"
-                      danger={user.active}
-                      style={{ marginLeft: 8 }}
+      {query.error && <Banner tone="error" title={query.error.message} />}
+      {(save.error || create.error || reset.error) && (
+        <Banner
+          tone="error"
+          title={(save.error ?? create.error ?? reset.error)?.message}
+        />
+      )}
+      {query.error ? null : query.isLoading ? (
+        <div className="center">
+          <Spinner className="size-6" />
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <Table className="management-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Tên đăng nhập</TableHead>
+                <TableHead>Tên</TableHead>
+                <TableHead>SĐT</TableHead>
+                <TableHead>Vai trò</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(query.data ?? []).map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.phone ?? "—"}</TableCell>
+                  <TableCell>
+                    <Badge
+                      className={`status-badge ${
+                        user.role === "OWNER"
+                          ? "st-READY_FOR_PICKUP"
+                          : user.role === "MANAGER"
+                            ? "st-PROCESSING"
+                            : "st-CANCELLED"
+                      }`}
                     >
-                      {user.active ? "Khoá" : "Mở"}
-                    </Button>
-                  </Popconfirm>
-                )}
-                <Button
-                  size="small"
-                  style={{ marginLeft: 8 }}
-                  onClick={() => {
-                    resetForm.resetFields();
-                    setResetting(user);
-                  }}
-                >
-                  Đặt lại mật khẩu
-                </Button>
-              </>
-            ),
-          },
-        ]}
-      />
-      <Modal
-        title={`Sửa ${editing?.name ?? ""}`}
+                      {roleLabels[user.role] ?? user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={`status-badge ${user.active ? "st-COMPLETED" : "st-CANCELLED"}`}
+                    >
+                      {user.active ? "Đang hoạt động" : "Đã khoá"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="table-actions">
+                      <Button size="sm" variant="outline" onClick={() => edit(user)}>
+                        Sửa
+                      </Button>
+                      {user.role !== "OWNER" && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant={user.active ? "destructive" : "outline"}
+                            >
+                              {user.active ? "Khoá" : "Mở"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                {user.active
+                                  ? "Khoá tài khoản này?"
+                                  : "Mở lại tài khoản?"}
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {user.name} · {user.username}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Để sau</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => toggle.mutate(user)}
+                              >
+                                Xác nhận
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          resetForm.reset({ password: "" });
+                          setResetting(user);
+                        }}
+                      >
+                        Đặt lại mật khẩu
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <Dialog
         open={!!editing}
-        onCancel={() => setEditing(null)}
-        onOk={() => form.submit()}
-        confirmLoading={save.isPending}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={(values) => save.mutate(values)}
-        >
-          <Form.Item
-            name="username"
-            label="Tên đăng nhập"
-            rules={[{ required: true }]}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa {editing?.name ?? ""}</DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={form.handleSubmit((values) => save.mutate(values))}
           >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label="Tên hiển thị"
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item name="phone" label="SĐT">
-            <Input />
-          </Form.Item>
-          {editing?.role !== "OWNER" && (
-            <Form.Item name="role" label="Vai trò">
-              <Select options={[{ value: "STAFF" }, { value: "MANAGER" }]} />
-            </Form.Item>
-          )}
-        </Form>
-      </Modal>
-      <Modal
-        title="Thêm nhân viên"
+            <TextField
+              control={form.control}
+              name="username"
+              label="Tên đăng nhập"
+              className="input-lg"
+              rules={{ required: "Nhập tên đăng nhập" }}
+            />
+            <TextField
+              control={form.control}
+              name="name"
+              label="Tên hiển thị"
+              className="input-lg"
+              rules={{ required: "Nhập tên hiển thị" }}
+            />
+            <TextField
+              control={form.control}
+              name="phone"
+              label="SĐT"
+              className="input-lg"
+            />
+            {editing?.role !== "OWNER" && (
+              <SelectField
+                control={form.control}
+                name="role"
+                label="Vai trò"
+                options={[
+                  { value: "STAFF", label: "Nhân viên" },
+                  { value: "MANAGER", label: "Quản lý" },
+                ]}
+              />
+            )}
+            <DialogFooter>
+              <Button type="submit" disabled={save.isPending}>
+                Lưu
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={creating}
-        onCancel={() => setCreating(false)}
-        onOk={() => createForm.submit()}
-        confirmLoading={create.isPending}
+        onOpenChange={(open) => {
+          if (!open) setCreating(false);
+        }}
       >
-        <Form
-          form={createForm}
-          layout="vertical"
-          onFinish={(values) => create.mutate(values)}
-        >
-          <Form.Item
-            name="username"
-            label="Tên đăng nhập"
-            rules={[{ required: true }]}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Thêm nhân viên</DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={createForm.handleSubmit((values) => create.mutate(values))}
           >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="name"
-            label="Tên hiển thị"
-            rules={[{ required: true }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item name="phone" label="SĐT">
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="role"
-            label="Vai trò"
-            initialValue="STAFF"
-            rules={[{ required: true }]}
-          >
-            <Select options={[{ value: "STAFF" }, { value: "MANAGER" }]} />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label="Mật khẩu"
-            rules={[{ required: true, min: 6, message: "Tối thiểu 6 ký tự" }]}
-          >
-            <Input.Password />
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Modal
-        title={`Đặt lại mật khẩu cho ${resetting?.name ?? ""}`}
+            <TextField
+              control={createForm.control}
+              name="username"
+              label="Tên đăng nhập"
+              className="input-lg"
+              rules={{ required: "Nhập tên đăng nhập" }}
+            />
+            <TextField
+              control={createForm.control}
+              name="name"
+              label="Tên hiển thị"
+              className="input-lg"
+              rules={{ required: "Nhập tên hiển thị" }}
+            />
+            <TextField
+              control={createForm.control}
+              name="phone"
+              label="SĐT"
+              className="input-lg"
+            />
+            <SelectField
+              control={createForm.control}
+              name="role"
+              label="Vai trò"
+              options={[
+                { value: "STAFF", label: "Nhân viên" },
+                { value: "MANAGER", label: "Quản lý" },
+              ]}
+              rules={{ required: "Chọn vai trò" }}
+            />
+            <TextField
+              control={createForm.control}
+              name="password"
+              label="Mật khẩu"
+              type="password"
+              className="input-lg"
+              rules={{
+                required: "Nhập mật khẩu",
+                minLength: { value: 6, message: "Tối thiểu 6 ký tự" },
+              }}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={create.isPending}>
+                Thêm
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={!!resetting}
-        onCancel={() => setResetting(null)}
-        onOk={() => resetForm.submit()}
-        confirmLoading={reset.isPending}
+        onOpenChange={(open) => {
+          if (!open) setResetting(null);
+        }}
       >
-        <Form
-          form={resetForm}
-          layout="vertical"
-          onFinish={(values) => reset.mutate(values)}
-        >
-          <Form.Item
-            name="password"
-            label="Mật khẩu mới"
-            rules={[{ required: true, min: 6, message: "Tối thiểu 6 ký tự" }]}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Đặt lại mật khẩu cho {resetting?.name ?? ""}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={resetForm.handleSubmit((values) => reset.mutate(values))}
           >
-            <Input.Password />
-          </Form.Item>
-        </Form>
-      </Modal>
+            <TextField
+              control={resetForm.control}
+              name="password"
+              label="Mật khẩu mới"
+              type="password"
+              className="input-lg"
+              rules={{
+                required: "Nhập mật khẩu mới",
+                minLength: { value: 6, message: "Tối thiểu 6 ký tự" },
+              }}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={reset.isPending}>
+                Đặt lại
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

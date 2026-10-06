@@ -1,13 +1,22 @@
-import { CloseOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, DatePicker, Form, Input, Spin } from "antd";
-import dayjs from "dayjs";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Customer, Order, Service } from "../api/types";
-import { BottomActionBar, PageHeader, QuickChoice } from "../components/common";
-import { calendarDate, dueDateResult, isPhoneInput, normalizePhone } from "./receive-utils";
+import {
+  Banner,
+  BottomActionBar,
+  Field,
+  PageHeader,
+  QuickChoice,
+  Spinner,
+  TextareaField,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { isPhoneInput, normalizePhone } from "./receive-utils";
 
 const notes = ["Giặt riêng", "Ít thơm", "Không nước xả", "Khác"];
 const isPhoneLike = (value: string) => /^[\d\s().+\-]+$/.test(value.trim());
@@ -25,12 +34,21 @@ const addDays = (value: string, days: number) => {
   }).format(date);
 };
 
-export { calendarDate, dueDateResult, isPhoneInput, normalizePhone };
+type ReceiveValues = {
+  customerLookup: string;
+  customerName?: string;
+  newCustomerPhone?: string;
+  customNote?: string;
+  dueDate: string;
+  deliveryAddress?: string;
+};
 
 export function ReceivePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [form] = Form.useForm();
+  const form = useForm<ReceiveValues>({
+    defaultValues: { dueDate: addDays(todayVN(), 1) },
+  });
   const [unknown, setUnknown] = useState(false);
   const [customerInput, setCustomerInput] = useState("");
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
@@ -40,7 +58,7 @@ export function ReceivePage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [note, setNote] = useState("Không có");
   const [duePeriod, setDuePeriod] = useState<"" | "MORNING" | "AFTERNOON">("");
-  const selectedDueDate = Form.useWatch("dueDate", form);
+  const selectedDueDate = form.watch("dueDate");
   const services = useQuery({
     queryKey: ["services"],
     queryFn: () => api<Service[]>("/services"),
@@ -91,14 +109,7 @@ export function ReceivePage() {
   }, [services.data, defaultApplied]);
 
   const create = useMutation({
-    mutationFn: (values: {
-      customerLookup?: string;
-      customerName?: string;
-      newCustomerPhone?: string;
-      customNote?: string;
-      dueDate: string;
-      deliveryAddress?: string;
-    }) =>
+    mutationFn: (values: ReceiveValues) =>
       api<Order>("/orders", {
         method: "POST",
         body: JSON.stringify({
@@ -142,11 +153,9 @@ export function ReceivePage() {
     setSelectedCustomer(customer);
     setNewCustomer(false);
     setCustomerInput(customer.phone);
-    form.setFieldsValue({
-      customerLookup: customer.phone,
-      customerName: customer.name,
-      deliveryAddress: customer.address,
-    });
+    form.setValue("customerLookup", customer.phone);
+    form.setValue("customerName", customer.name);
+    form.setValue("deliveryAddress", customer.address);
     setCustomerSearchQuery("");
   };
   const toggleService = (serviceId: string) => {
@@ -157,19 +166,6 @@ export function ReceivePage() {
     );
   };
   const dueDefault = addDays(todayVN(), 1);
-  const normalizeDueDate = (raw: string) => {
-    const result = dueDateResult(raw);
-    if (!result) {
-      form.setFields([{ name: "dueDate", value: undefined, errors: [] }]);
-    } else if ("error" in result) {
-      form.setFields([
-        { name: "dueDate", value: undefined, errors: [result.error] },
-      ]);
-    } else {
-      form.setFields([{ name: "dueDate", value: result.value, errors: [] }]);
-    }
-    return result;
-  };
 
   return (
     <div className="has-bottom-action">
@@ -177,19 +173,15 @@ export function ReceivePage() {
         Nhận đồ
       </PageHeader>
       {(create.error || services.error) && (
-        <Alert
+        <Banner
           className="customer-match"
-          type="error"
-          message={(create.error ?? services.error)?.message}
-          showIcon
+          tone="error"
+          title={(create.error ?? services.error)?.message}
         />
       )}
-      <Form
+      <form
         className="task-form receive-form"
-        form={form}
-        layout="vertical"
-        initialValues={{ dueDate: dueDefault }}
-        onFinish={(values) => create.mutate(values)}
+        onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
         <section className="task-section customer-section">
           <div
@@ -198,8 +190,8 @@ export function ReceivePage() {
             aria-label="Thông tin khách"
           >
             <Button
-              className={!unknown ? "active" : ""}
-              type={!unknown ? "primary" : "default"}
+              type="button"
+              variant={unknown ? "outline" : "default"}
               aria-pressed={!unknown}
               onClick={() => {
                 setUnknown(false);
@@ -210,8 +202,8 @@ export function ReceivePage() {
               Có SĐT khách
             </Button>
             <Button
-              className={unknown ? "active" : ""}
-              type={unknown ? "primary" : "default"}
+              type="button"
+              variant={unknown ? "default" : "outline"}
               aria-pressed={unknown}
               onClick={() => {
                 setUnknown(true);
@@ -226,39 +218,50 @@ export function ReceivePage() {
           {!unknown ? (
             <>
               <div className="customer-lookup">
-                <Form.Item
+                <Controller
+                  control={form.control}
                   name="customerLookup"
-                  label="Khách hàng"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Nhập số điện thoại hoặc tên khách",
-                    },
-                  ]}
-                >
-                  <Input
-                    autoFocus
-                    autoComplete="off"
-                    size="large"
-                    placeholder="Nhập số điện thoại hoặc tên khách"
-                    disabled={newCustomer || create.isPending}
-                    onChange={(event) => {
-                      setCustomerInput(event.target.value);
-                      setNewCustomer(false);
-                      if (
-                        selectedCustomer &&
-                        normalizePhone(event.target.value) !==
-                          selectedCustomer.phone
-                      )
-                        setSelectedCustomer(undefined);
-                    }}
-                  />
-                </Form.Item>
+                  rules={{
+                    required: "Nhập số điện thoại hoặc tên khách",
+                  }}
+                  render={({ field, fieldState }) => (
+                    <Field
+                      label="Khách hàng"
+                      htmlFor="customerLookup"
+                      error={fieldState.error?.message}
+                    >
+                      <Input
+                        id="customerLookup"
+                        className="input-lg"
+                        autoFocus
+                        autoComplete="off"
+                        placeholder="Nhập số điện thoại hoặc tên khách"
+                        disabled={newCustomer || create.isPending}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.preventDefault();
+                        }}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(event) => {
+                          field.onChange(event.target.value);
+                          setCustomerInput(event.target.value);
+                          setNewCustomer(false);
+                          if (
+                            selectedCustomer &&
+                            normalizePhone(event.target.value) !==
+                              selectedCustomer.phone
+                          )
+                            setSelectedCustomer(undefined);
+                        }}
+                      />
+                    </Field>
+                  )}
+                />
               </div>
 
               {customers.isFetching && (
                 <div className="lookup-state" role="status">
-                  <Spin size="small" /> Đang tìm khách...
+                  <Spinner className="size-4" /> Đang tìm khách...
                 </div>
               )}
               {customerSearchQuery &&
@@ -270,8 +273,9 @@ export function ReceivePage() {
                   aria-label="Gợi ý khách hàng"
                 >
                   {customers.data.map((customer) => (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
                       className="customer-suggestion"
                       role="option"
                       key={customer.id}
@@ -280,7 +284,7 @@ export function ReceivePage() {
                       <strong>
                         {customer.name ?? "Khách cũ"} - {customer.phone}
                       </strong>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ) : customerSearchQuery &&
@@ -290,18 +294,19 @@ export function ReceivePage() {
                 <div className="new-customer-panel">
                   <p>Không tìm thấy khách hàng.</p>
                   <Button
-                    type="dashed"
-                    block
+                    type="button"
+                    variant="outline"
+                    className="w-full"
                     onClick={() => {
                       setNewCustomer(true);
-                      form.setFieldsValue({
-                        newCustomerPhone: addingPhone
-                          ? normalizePhone(customerInput)
-                          : undefined,
-                        customerName: addingPhone
-                          ? undefined
-                          : customerInput.trim(),
-                      });
+                      form.setValue(
+                        "newCustomerPhone",
+                        addingPhone ? normalizePhone(customerInput) : undefined,
+                      );
+                      form.setValue(
+                        "customerName",
+                        addingPhone ? undefined : customerInput.trim(),
+                      );
                     }}
                   >
                     + Thêm mới khách hàng
@@ -311,51 +316,72 @@ export function ReceivePage() {
               {newCustomer && (
                 <div className="new-customer-fields">
                   {addingPhone ? (
-                    <Form.Item
+                    <Controller
+                      control={form.control}
                       name="customerName"
-                      label="Tên khách hàng"
-                      rules={[
-                        { required: true, message: "Nhập tên khách hàng" },
-                        {
-                          validator: (_, value) =>
-                            isValidCustomerName(value ?? "")
-                              ? Promise.resolve()
-                              : Promise.reject(
-                                  new Error("Nhập tên khách hàng hợp lệ"),
-                                ),
-                        },
-                      ]}
-                    >
-                      <Input size="large" placeholder="Nguyễn Văn A" />
-                    </Form.Item>
+                      rules={{
+                        required: "Nhập tên khách hàng",
+                        validate: (value) =>
+                          isValidCustomerName(value ?? "") ||
+                          "Nhập tên khách hàng hợp lệ",
+                      }}
+                      render={({ field, fieldState }) => (
+                        <Field
+                          label="Tên khách hàng"
+                          htmlFor="customerName"
+                          error={fieldState.error?.message}
+                        >
+                          <Input
+                            id="customerName"
+                            className="input-lg"
+                            placeholder="Nguyễn Văn A"
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") event.preventDefault();
+                            }}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </Field>
+                      )}
+                    />
                   ) : (
-                    <Form.Item
+                    <Controller
+                      control={form.control}
                       name="newCustomerPhone"
-                      label="Số điện thoại"
-                      rules={[
-                        { required: true, message: "Nhập số điện thoại" },
-                        {
-                          validator: (_, value) =>
-                            isPhoneInput(value ?? "")
-                              ? Promise.resolve()
-                              : Promise.reject(
-                                  new Error("Số điện thoại không hợp lệ"),
-                                ),
-                        },
-                      ]}
-                    >
-                      <Input
-                        size="large"
-                        inputMode="tel"
-                        placeholder="09xxxxxxxx"
-                      />
-                    </Form.Item>
+                      rules={{
+                        required: "Nhập số điện thoại",
+                        validate: (value) =>
+                          isPhoneInput(value ?? "") ||
+                          "Số điện thoại không hợp lệ",
+                      }}
+                      render={({ field, fieldState }) => (
+                        <Field
+                          label="Số điện thoại"
+                          htmlFor="newCustomerPhone"
+                          error={fieldState.error?.message}
+                        >
+                          <Input
+                            id="newCustomerPhone"
+                            className="input-lg"
+                            inputMode="tel"
+                            placeholder="09xxxxxxxx"
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") event.preventDefault();
+                            }}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </Field>
+                      )}
+                    />
                   )}
                   <Button
-                    type="link"
+                    type="button"
+                    variant="link"
                     onClick={() => {
                       setNewCustomer(false);
-                      form.resetFields(["customerName", "newCustomerPhone"]);
+                      form.setValue("customerName", undefined);
+                      form.setValue("newCustomerPhone", undefined);
                     }}
                   >
                     Nhập lại
@@ -377,23 +403,24 @@ export function ReceivePage() {
           </div>
           {services.isLoading ? (
             <div className="lookup-state">
-              <Spin size="small" /> Đang tải dịch vụ...
+              <Spinner className="size-4" /> Đang tải dịch vụ...
             </div>
           ) : (
             <div className="receive-services">
               {(services.data ?? []).map((service) => {
                 const selected = selectedServices.includes(service.id);
                 return (
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
                     key={service.id}
                     className={`receive-service ${selected ? "selected" : ""}`}
                     aria-pressed={selected}
                     onClick={() => toggleService(service.id)}
                   >
                     <span>{service.name}</span>
-                    {selected && <CloseOutlined aria-hidden="true" />}
-                  </button>
+                    {selected && <X aria-hidden="true" />}
+                  </Button>
                 );
               })}
             </div>
@@ -402,40 +429,27 @@ export function ReceivePage() {
 
         <section className="task-section schedule-section">
           <div className="schedule-grid">
-            <Form.Item
+            <Controller
+              control={form.control}
               name="dueDate"
-              label="Hẹn trả"
-              getValueProps={(value: string) => ({
-                value: value ? dayjs(value) : undefined,
-              })}
-              normalize={(value) => value?.format("YYYY-MM-DD")}
-              rules={[{ required: true, message: "Chọn ngày hẹn trả" }]}
-            >
-              <DatePicker
-                size="large"
-                format={["DD/MM/YYYY", "DDMM", "D/M/YYYY"]}
-                placeholder="DD/MM/YYYY hoặc DDMM hoặc ngày"
-                preserveInvalidOnBlur
-                disabledDate={(current) =>
-                  current.format("YYYY-MM-DD") < todayVN()
-                }
-                onBlur={(event) => {
-                  const input = event.target;
-                  if (!(input instanceof HTMLInputElement)) return;
-                  const result = normalizeDueDate(input.value);
-                  if (result && "display" in result) input.value = result.display;
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter") return;
-                  const input = event.target;
-                  if (!(input instanceof HTMLInputElement)) return;
-                  const result = normalizeDueDate(input.value);
-                  if (result && "display" in result) input.value = result.display;
-                  event.preventDefault();
-                }}
-                style={{ width: "100%" }}
-              />
-            </Form.Item>
+              rules={{ required: "Chọn ngày hẹn trả" }}
+              render={({ field, fieldState }) => (
+                <Field
+                  label="Hẹn trả"
+                  htmlFor="dueDate"
+                  error={fieldState.error?.message}
+                >
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    className="date-input"
+                    min={todayVN()}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </Field>
+              )}
+            />
             <div className="date-shortcuts" aria-label="Ngày hẹn trả nhanh">
               {[
                 { label: "Hôm nay", value: todayVN() },
@@ -444,70 +458,65 @@ export function ReceivePage() {
               ].map((option) => (
                 <Button
                   key={option.label}
-                  type={selectedDueDate === option.value ? "primary" : "default"}
-                  onClick={() => {
-                    form.setFields([
-                      { name: "dueDate", value: option.value, errors: [] },
-                    ]);
-                  }}
+                  type="button"
+                  variant={selectedDueDate === option.value ? "default" : "outline"}
+                  onClick={() => form.setValue("dueDate", option.value, { shouldValidate: true })}
                 >
                   {option.label}
                 </Button>
               ))}
             </div>
-            <Form.Item label="Buổi hẹn trả">
+            <Field label="Buổi hẹn trả">
               <QuickChoice
                 value={duePeriod}
-                onChange={(event) =>
-                  setDuePeriod(event.target.value as "" | "MORNING" | "AFTERNOON")
-                }
+                onChange={(value) => setDuePeriod(value)}
                 options={[
                   { label: "Sáng", value: "MORNING" },
                   { label: "Chiều", value: "AFTERNOON" },
                 ]}
               />
-            </Form.Item>
+            </Field>
           </div>
-          <Form.Item name="deliveryAddress" label="Địa chỉ giao hàng">
-            <Input.TextArea
-              rows={3}
-              placeholder="Nhập địa chỉ nếu cần giao tận nơi"
-            />
-          </Form.Item>
+          <TextareaField
+            control={form.control}
+            name="deliveryAddress"
+            label="Địa chỉ giao hàng"
+            rows={3}
+            placeholder="Nhập địa chỉ nếu cần giao tận nơi"
+          />
         </section>
 
         <section className="task-section note-section">
-          <Form.Item label="Lưu ý cho đơn">
+          <Field label="Lưu ý cho đơn">
             <QuickChoice
-              options={notes}
+              options={notes.map((value) => ({ label: value, value }))}
               value={note}
               disabled={create.isPending}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(value) => setNote(value)}
             />
-          </Form.Item>
+          </Field>
           {note === "Khác" && (
-            <Form.Item
+            <TextareaField
+              control={form.control}
               name="customNote"
               label="Lưu ý khác"
-              rules={[{ required: true, message: "Nhập lưu ý" }]}
-            >
-              <Input.TextArea rows={3} placeholder="Ví dụ: đồ dễ phai màu" />
-            </Form.Item>
+              rows={3}
+              placeholder="Ví dụ: đồ dễ phai màu"
+              rules={{ required: "Nhập lưu ý" }}
+            />
           )}
         </section>
         <BottomActionBar>
           <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={create.isPending}
+            type="submit"
+            size="lg"
+            className="w-full"
             disabled={create.isPending}
           >
             {create.isPending ? "ĐANG TẠO ĐƠN..." : "TẠO ĐƠN"}
           </Button>
         </BottomActionBar>
-      </Form>
+      </form>
     </div>
   );
 }

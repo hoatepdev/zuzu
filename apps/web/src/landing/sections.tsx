@@ -1,9 +1,4 @@
-import {
-  CheckOutlined,
-  EnvironmentOutlined,
-  PhoneOutlined,
-  SendOutlined,
-} from "@ant-design/icons";
+import { Check, MapPin, Phone, Send } from "lucide-react";
 import {
   contactInfo,
   prices,
@@ -21,7 +16,7 @@ export function ContactActions({ compact = false }: { compact?: boolean }) {
         className="landing-button landing-button-primary"
         href={contactInfo.phoneHref}
       >
-        <PhoneOutlined aria-hidden="true" />
+        <Phone aria-hidden="true" />
         Gọi cho ZUZU
       </a>
       <a
@@ -30,7 +25,7 @@ export function ContactActions({ compact = false }: { compact?: boolean }) {
         target="_blank"
         rel="noreferrer"
       >
-        <SendOutlined aria-hidden="true" />
+        <Send aria-hidden="true" />
         Nhắn Zalo
       </a>
     </div>
@@ -159,7 +154,7 @@ export function TrustAndGallery() {
         <ul>
           {trustPoints.map((point) => (
             <li key={point}>
-              <CheckOutlined aria-hidden="true" />
+              <Check aria-hidden="true" />
               {point}
             </li>
           ))}
@@ -212,7 +207,7 @@ export function Reviews() {
       </div>
       <a href={contactInfo.mapsHref} target="_blank" rel="noreferrer">
         Xem ZUZU trên Google Maps
-        <EnvironmentOutlined aria-hidden="true" />
+        <MapPin aria-hidden="true" />
       </a>
     </section>
   );
@@ -244,14 +239,14 @@ export function Location() {
           target="_blank"
           rel="noreferrer"
         >
-          <EnvironmentOutlined aria-hidden="true" />
+          <MapPin aria-hidden="true" />
           Chỉ đường
         </a>
         <a
           className="landing-button landing-button-quiet"
           href={contactInfo.phoneHref}
         >
-          <PhoneOutlined aria-hidden="true" />
+          <Phone aria-hidden="true" />
           Gọi ngay
         </a>
         <a
@@ -260,7 +255,7 @@ export function Location() {
           target="_blank"
           rel="noreferrer"
         >
-          <SendOutlined aria-hidden="true" />
+          <Send aria-hidden="true" />
           Nhắn Zalo
         </a>
       </div>
@@ -272,15 +267,15 @@ export function MobileActions() {
   return (
     <nav className="landing-mobile-actions" aria-label="Liên hệ nhanh">
       <a href={contactInfo.phoneHref}>
-        <PhoneOutlined aria-hidden="true" />
+        <Phone aria-hidden="true" />
         <span>Gọi</span>
       </a>
       <a href={contactInfo.zaloHref} target="_blank" rel="noreferrer">
-        <SendOutlined aria-hidden="true" />
+        <Send aria-hidden="true" />
         <span>Zalo</span>
       </a>
       <a href={contactInfo.mapsHref} target="_blank" rel="noreferrer">
-        <EnvironmentOutlined aria-hidden="true" />
+        <MapPin aria-hidden="true" />
         <span>Chỉ đường</span>
       </a>
     </nav>

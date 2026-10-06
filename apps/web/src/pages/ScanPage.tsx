@@ -1,10 +1,12 @@
-import { Form, Input } from "antd";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QrScanner } from "../components/QrScanner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function ScanPage() {
   const navigate = useNavigate();
+  const [code, setCode] = useState("");
   const open = useCallback(
     (value: string) =>
       navigate(`/orders/${encodeURIComponent(value.trim().toUpperCase())}`),
@@ -17,20 +19,25 @@ export function ScanPage() {
       <QrScanner onScan={open} />
       <section className="scanner-foot" aria-label="Tìm đơn bằng mã">
         <div className="divider">Hoặc nhập mã đơn</div>
-        <Form className="manual-code-form" onFinish={({ code }) => open(code)}>
-          <Form.Item
-            name="code"
-            rules={[{ required: true, message: "Nhập mã đơn" }]}
-          >
-            <Input.Search
-              autoCapitalize="characters"
-              size="large"
-              placeholder="Ví dụ: ZU-0182"
-              enterButton="Tìm đơn"
-              onSearch={open}
-            />
-          </Form.Item>
-        </Form>
+        <form
+          className="manual-code-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (code.trim()) open(code);
+          }}
+        >
+          <Input
+            className="input-lg"
+            autoCapitalize="characters"
+            placeholder="Ví dụ: ZU-0182"
+            aria-label="Nhập mã đơn"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+          <Button type="submit" size="lg" className="manual-code-button">
+            Tìm đơn
+          </Button>
+        </form>
       </section>
     </div>
   );

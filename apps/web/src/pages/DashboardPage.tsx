@@ -1,24 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
-import { Alert, DatePicker, Spin } from "antd";
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Dashboard } from "../api/types";
-import { Metric, Money, PageHeader } from "../components/common";
+import {
+  Banner,
+  Metric,
+  Money,
+  PageHeader,
+  Spinner,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const todayVN = () =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
     new Date(),
   );
+const formatDMY = (iso: string) => {
+  const [year, month, day] = iso.split("-");
+  return `${day}/${month}/${year}`;
+};
 export function DashboardPage() {
   const today = todayVN();
-  const [dates, setDates] = useState<[Dayjs | null, Dayjs | null]>([
-    dayjs(today),
-    dayjs(today),
-  ]);
-  const from = dates[0]?.format("YYYY-MM-DD") ?? today;
-  const to = dates[1]?.format("YYYY-MM-DD") ?? today;
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(today);
   const query = useQuery({
     queryKey: ["dashboard", from, to],
     queryFn: () => api<Dashboard>(`/dashboard/range?from=${from}&to=${to}`),
@@ -27,29 +34,51 @@ export function DashboardPage() {
 
   return (
     <>
-      <PageHeader sub="Tổng quan tài chính và vận hành">
-        {from === to
-          ? "Hôm nay"
-          : `${dates[0]?.format("DD/MM/YYYY")} → ${dates[1]?.format("DD/MM/YYYY")}`}
+      <PageHeader
+        sub="Tổng quan tài chính và vận hành"
+        extra={
+          <Button size="lg">
+            <Link to="/receive">NHẬN ĐỒ</Link>
+          </Button>
+        }
+      >
+        {from === to ? "Hôm nay" : `${formatDMY(from)} → ${formatDMY(to)}`}
       </PageHeader>
-      <DatePicker.RangePicker
-        aria-label="Khoảng ngày dashboard"
-        size="large"
-        format="DD/MM/YYYY"
-        value={dates}
-        onChange={(value) => value && setDates(value)}
-      />
+      <div className="range-picker" aria-label="Khoảng ngày dashboard">
+        <Label htmlFor="dashboard-from">
+          <span>Từ</span>
+          <Input
+            id="dashboard-from"
+            type="date"
+            className="date-input"
+            value={from}
+            max={to}
+            onChange={(event) => setFrom(event.target.value || today)}
+          />
+        </Label>
+        <Label htmlFor="dashboard-to">
+          <span>Đến</span>
+          <Input
+            id="dashboard-to"
+            type="date"
+            className="date-input"
+            value={to}
+            min={from}
+            max={today}
+            onChange={(event) => setTo(event.target.value || today)}
+          />
+        </Label>
+      </div>
       {query.error && (
-        <Alert
+        <Banner
           className="list-card"
-          type="error"
-          message={query.error.message}
-          showIcon
+          tone="error"
+          title={query.error.message}
         />
       )}
-      {query.isLoading ? (
+      {query.error ? null : query.isLoading ? (
         <div className="center">
-          <Spin />
+          <Spinner className="size-6" />
         </div>
       ) : (
         <>

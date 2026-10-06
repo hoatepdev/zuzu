@@ -1,16 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  App as AntApp,
-  Button,
-  Form,
-  Input,
-} from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
-import { PageHeader } from "../components/common";
+import { PageHeader, TextField } from "../components/common";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useSession } from "../session";
 import { User } from "../api/types";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 const roleLabels: Record<string, string> = {
   OWNER: "Chủ cửa hàng",
@@ -47,11 +55,10 @@ export function ProfilePage() {
   const me = session.data;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { message, modal } = AntApp.useApp();
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [profileForm] = Form.useForm<ProfileValues>();
-  const [passwordForm] = Form.useForm<PasswordValues>();
+  const profileForm = useForm<ProfileValues>();
+  const passwordForm = useForm<PasswordValues>();
 
   const logout = useMutation({
     mutationFn: () => api("/auth/logout", { method: "POST" }),
@@ -74,9 +81,9 @@ export function ProfilePage() {
       setEditing(false);
       queryClient.setQueryData(["session"], user);
       void queryClient.invalidateQueries({ queryKey: ["session"] });
-      message.success("Đã cập nhật thông tin");
+      toast.success("Đã cập nhật thông tin");
     },
-    onError: (error) => message.error(error.message),
+    onError: (error) => toast.error(error.message),
   });
 
   const changePassword = useMutation({
@@ -90,25 +97,16 @@ export function ProfilePage() {
       }),
     onSuccess: () => {
       setChangingPassword(false);
-      message.success("Đã đổi mật khẩu");
+      passwordForm.reset();
+      toast.success("Đã đổi mật khẩu");
     },
-    onError: (error) => message.error(error.message),
+    onError: (error) => toast.error(error.message),
   });
 
   const startEdit = () => {
     setChangingPassword(false);
-    profileForm.setFieldsValue({ name: me?.name, phone: me?.phone });
+    profileForm.reset({ name: me?.name, phone: me?.phone });
     setEditing(true);
-  };
-
-  const confirmLogout = () => {
-    modal.confirm({
-      title: "Bạn muốn đăng xuất khỏi ZUZU?",
-      okText: "Đăng xuất",
-      cancelText: "Huỷ",
-      okButtonProps: { danger: true },
-      onOk: () => logout.mutateAsync(),
-    });
   };
 
   return (
@@ -131,63 +129,62 @@ export function ProfilePage() {
         <div className="panel">
           <h2 className="panel-title">Thông tin tài khoản</h2>
           {editing ? (
-            <Form
-              form={profileForm}
-              layout="vertical"
-              onFinish={(values) => saveProfile.mutate(values)}
+            <form
+              className="task-form"
+              onSubmit={profileForm.handleSubmit((values) =>
+                saveProfile.mutate(values),
+              )}
             >
-              <Form.Item
+              <TextField
+                control={profileForm.control}
                 name="name"
                 label="Tên hiển thị"
-                rules={[{ required: true, message: "Nhập tên hiển thị" }]}
-              >
-                <Input size="large" />
-              </Form.Item>
-              <Form.Item
+                className="input-lg"
+                rules={{ required: "Nhập tên hiển thị" }}
+              />
+              <TextField
+                control={profileForm.control}
                 name="phone"
                 label="Số điện thoại"
-                rules={[
-                  {
-                    pattern: /^0\d{9,10}$/,
+                className="input-lg"
+                inputMode="tel"
+                rules={{
+                  pattern: {
+                    value: /^0\d{9,10}$/,
                     message: "SĐT không hợp lệ (VD: 0912345678)",
                   },
-                ]}
-              >
-                <Input size="large" inputMode="tel" />
-              </Form.Item>
+                }}
+              />
               <div className="profile-actions">
                 <Button
-                  size="large"
-                  block
+                  size="lg"
+                  type="button"
                   onClick={() => setEditing(false)}
                 >
                   HUỶ
                 </Button>
-                <Button
-                  type="primary"
-                  size="large"
-                  block
-                  htmlType="submit"
-                  loading={saveProfile.isPending}
-                >
+                <Button size="lg" type="submit" disabled={saveProfile.isPending}>
                   LƯU
                 </Button>
               </div>
-            </Form>
+            </form>
           ) : (
             <>
               <InfoRow label="Tên hiển thị" value={me?.name} />
               <InfoRow label="Tên đăng nhập" value={me?.username} />
               <InfoRow label="Số điện thoại" value={me?.phone} />
-              <InfoRow label="Vai trò" value={me?.role ? roleLabels[me.role] : undefined} />
+              <InfoRow
+                label="Vai trò"
+                value={me?.role ? roleLabels[me.role] : undefined}
+              />
               <div className="profile-actions" style={{ marginTop: 16 }}>
-                <Button size="large" onClick={startEdit}>
+                <Button size="lg" onClick={startEdit}>
                   CHỈNH SỬA
                 </Button>
                 <Button
-                  size="large"
+                  size="lg"
                   onClick={() => {
-                    passwordForm.resetFields();
+                    passwordForm.reset();
                     setChangingPassword(true);
                   }}
                 >
@@ -195,78 +192,92 @@ export function ProfilePage() {
                 </Button>
               </div>
               {changingPassword && (
-                <Form
-                  form={passwordForm}
-                  layout="vertical"
+                <form
+                  className="task-form"
                   style={{ marginTop: 12 }}
-                  onFinish={(values) => changePassword.mutate(values)}
+                  onSubmit={passwordForm.handleSubmit((values) =>
+                    changePassword.mutate(values),
+                  )}
                 >
-                  <Form.Item
+                  <TextField
+                    control={passwordForm.control}
                     name="currentPassword"
                     label="Mật khẩu hiện tại"
-                    rules={[{ required: true, message: "Nhập mật khẩu hiện tại" }]}
-                  >
-                    <Input.Password size="large" />
-                  </Form.Item>
-                  <Form.Item
+                    type="password"
+                    className="input-lg"
+                    rules={{ required: "Nhập mật khẩu hiện tại" }}
+                  />
+                  <TextField
+                    control={passwordForm.control}
                     name="newPassword"
                     label="Mật khẩu mới"
-                    rules={[
-                      { required: true, message: "Nhập mật khẩu mới" },
-                      { min: 6, message: "Tối thiểu 6 ký tự" },
-                    ]}
-                  >
-                    <Input.Password size="large" />
-                  </Form.Item>
-                  <Form.Item
+                    type="password"
+                    className="input-lg"
+                    rules={{
+                      required: "Nhập mật khẩu mới",
+                      minLength: { value: 6, message: "Tối thiểu 6 ký tự" },
+                    }}
+                  />
+                  <TextField
+                    control={passwordForm.control}
                     name="confirm"
                     label="Nhập lại mật khẩu mới"
-                    dependencies={["newPassword"]}
-                    rules={[
-                      { required: true, message: "Nhập lại mật khẩu mới" },
-                      ({ getFieldValue }) => ({
-                        validator(_, value) {
-                          if (!value || value === getFieldValue("newPassword"))
-                            return Promise.resolve();
-                          return Promise.reject(
-                            new Error("Mật khẩu nhập lại không khớp"),
-                          );
-                        },
-                      }),
-                    ]}
-                  >
-                    <Input.Password size="large" />
-                  </Form.Item>
+                    type="password"
+                    className="input-lg"
+                    rules={{
+                      required: "Nhập lại mật khẩu mới",
+                      validate: (value: string) =>
+                        value === passwordForm.getValues("newPassword") ||
+                        "Mật khẩu nhập lại không khớp",
+                    }}
+                  />
                   <div className="profile-actions">
-                    <Button size="large" block onClick={() => setChangingPassword(false)}>
+                    <Button
+                      size="lg"
+                      type="button"
+                      onClick={() => setChangingPassword(false)}
+                    >
                       HUỶ
                     </Button>
                     <Button
-                      type="primary"
-                      size="large"
-                      block
-                      htmlType="submit"
-                      loading={changePassword.isPending}
+                      size="lg"
+                      type="submit"
+                      disabled={changePassword.isPending}
                     >
                       LƯU
                     </Button>
                   </div>
-                </Form>
+                </form>
               )}
             </>
           )}
         </div>
 
         <div className="panel">
-          <Button
-            danger
-            block
-            size="large"
-            loading={logout.isPending}
-            onClick={confirmLogout}
-          >
-            ĐĂNG XUẤT
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="lg" className="w-full">
+                ĐĂNG XUẤT
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Bạn muốn đăng xuất khỏi ZUZU?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cần đăng nhập lại để tiếp tục làm việc.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Huỷ</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-white hover:bg-destructive/90"
+                  onClick={() => logout.mutate()}
+                >
+                  Đăng xuất
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </>

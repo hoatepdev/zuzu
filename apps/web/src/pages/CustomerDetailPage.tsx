@@ -1,50 +1,95 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Form, Input, InputNumber, Modal, Spin, Switch } from "antd";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CustomerDetail } from "../api/types";
-import { Money, PageHeader, StatusBadge, orderTime } from "../components/common";
+import {
+  Money,
+  NumberField,
+  PageHeader,
+  Spinner,
+  StatusBadge,
+  SwitchField,
+  TextField,
+  TextareaField,
+  orderTime,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useSession } from "../session";
+
+type EditValues = {
+  name?: string;
+  phone: string;
+  laundryPreference?: string;
+  note?: string;
+  marketingOptIn?: boolean;
+};
+
 export function CustomerDetailPage() {
-  const { message, modal } = AntApp.useApp();
   const { id = "" } = useParams();
   const session = useSession();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [form] = Form.useForm();
-  const [adjustForm] = Form.useForm();
+  const form = useForm<EditValues>();
+  const adjustForm = useForm<{ points: number; reason: string }>();
   const query = useQuery({
     queryKey: ["customer", id],
     queryFn: () => api<CustomerDetail>(`/customers/${id}`),
   });
   const save = useMutation({
-    mutationFn: (values: Partial<CustomerDetail>) =>
+    mutationFn: (values: EditValues) =>
       api(`/customers/${id}`, { method: "PATCH", body: JSON.stringify(values) }),
     onSuccess: () => {
       setOpen(false);
+      setConfirming(false);
       void qc.invalidateQueries({ queryKey: ["customer", id] });
       void qc.invalidateQueries({ queryKey: ["customers"] });
-      message.success("Đã cập nhật khách");
+      toast.success("Đã cập nhật khách");
     },
-    onError: (error) => message.error(error.message),
+    onError: (error) => toast.error(error.message),
   });
   const adjust = useMutation({
     mutationFn: (values: { points: number; reason: string }) =>
       api(`/customers/${id}/loyalty-adjust`, { method: "POST", body: JSON.stringify(values) }),
     onSuccess: () => {
       setAdjustOpen(false);
-      adjustForm.resetFields();
+      adjustForm.reset();
       void qc.invalidateQueries({ queryKey: ["customer", id] });
-      message.success("Đã điều chỉnh điểm");
+      toast.success("Đã điều chỉnh điểm");
     },
   });
   const customer = query.data;
-  if (query.isLoading) return <div className="center"><Spin/></div>;
+  if (query.isLoading) return <div className="center"><Spinner className="size-6" /></div>;
   if (!customer) return <div className="center">Không tải được khách hàng</div>;
   const edit = () => {
-    form.setFieldsValue(customer);
+    form.reset({
+      name: customer.name,
+      phone: customer.phone,
+      laundryPreference: customer.laundryPreference,
+      note: customer.note,
+      marketingOptIn: customer.marketingOptIn,
+    });
     setOpen(true);
   };
   return (
@@ -52,10 +97,12 @@ export function CustomerDetailPage() {
       <PageHeader
         sub={customer.phone}
         extra={(
-          <>
-            <Button onClick={edit}>Sửa</Button>
-            {session.data?.role !== "STAFF" && <Button style={{ marginLeft: 8 }} onClick={() => setAdjustOpen(true)}>Điểm</Button>}
-          </>
+          <div className="header-actions">
+            <Button variant="outline" onClick={edit}>Sửa</Button>
+            {session.data?.role !== "STAFF" && (
+              <Button variant="outline" onClick={() => setAdjustOpen(true)}>Điểm</Button>
+            )}
+          </div>
         )}
       >
         {customer.name ?? customer.phone}
@@ -85,7 +132,7 @@ export function CustomerDetailPage() {
               </Link>
             ))}
           </div>
-        ) : <p style={{ margin: 0, color: "var(--ink-2)" }}>Chưa có đơn</p>}
+        ) : <p className="muted-p">Chưa có đơn</p>}
       </div>
       <div className="panel">
         <h2 className="panel-title">Lịch sử điểm</h2>
@@ -98,50 +145,117 @@ export function CustomerDetailPage() {
               </div>
             ))}
           </div>
-        ) : <p style={{ margin: 0, color: "var(--ink-2)" }}>Chưa có điểm</p>}
+        ) : <p className="muted-p">Chưa có điểm</p>}
       </div>
-      <Modal
-        title="Sửa khách hàng"
+      <Dialog
         open={open}
-        onCancel={() => setOpen(false)}
-        onOk={async () => {
-          const values = await form.validateFields();
-          modal.confirm({
-            title: "Xác nhận lưu thông tin?",
-            content: `${values.name || "Chưa có tên"} · ${values.phone}`,
-            okText: "Lưu",
-            cancelText: "Huỷ",
-            onOk: () => save.mutateAsync(values),
-          });
+        onOpenChange={(next) => {
+          if (!next) {
+            setOpen(false);
+            setConfirming(false);
+          }
         }}
-        confirmLoading={save.isPending}
       >
-        <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Tên"><Input/></Form.Item>
-          <Form.Item name="phone" label="Số điện thoại" rules={[{ required: true, message: "Nhập số điện thoại" }]}>
-            <Input autoComplete="tel" inputMode="tel"/>
-          </Form.Item>
-          <Form.Item name="laundryPreference" label="Sở thích giặt"><Input/></Form.Item>
-          <Form.Item name="note" label="Ghi chú"><Input.TextArea/></Form.Item>
-          <Form.Item name="marketingOptIn" label="Nhận tin marketing" valuePropName="checked"><Switch/></Form.Item>
-        </Form>
-      </Modal>
-      <Modal
-        title="Điều chỉnh điểm"
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa khách hàng</DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={form.handleSubmit(() => setConfirming(true))}
+          >
+            <TextField
+              control={form.control}
+              name="name"
+              label="Tên"
+              className="input-lg"
+            />
+            <TextField
+              control={form.control}
+              name="phone"
+              label="Số điện thoại"
+              className="input-lg"
+              autoComplete="tel"
+              inputMode="tel"
+              rules={{ required: "Nhập số điện thoại" }}
+            />
+            <TextField
+              control={form.control}
+              name="laundryPreference"
+              label="Sở thích giặt"
+              className="input-lg"
+            />
+            <TextareaField
+              control={form.control}
+              name="note"
+              label="Ghi chú"
+            />
+            <SwitchField
+              control={form.control}
+              name="marketingOptIn"
+              label="Nhận tin marketing"
+            />
+            <DialogFooter>
+              <Button type="submit">Tiếp tục</Button>
+            </DialogFooter>
+          </form>
+          <AlertDialog open={confirming} onOpenChange={setConfirming}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xác nhận lưu thông tin?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {form.getValues("name") || "Chưa có tên"} · {form.getValues("phone")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Để sau</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => save.mutate(form.getValues())}
+                >
+                  Lưu
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={adjustOpen}
-        onCancel={() => setAdjustOpen(false)}
-        onOk={() => adjustForm.submit()}
-        confirmLoading={adjust.isPending}
+        onOpenChange={setAdjustOpen}
       >
-        <Form form={adjustForm} layout="vertical" onFinish={(values) => adjust.mutate(values)}>
-          <Form.Item name="points" label="Điểm (số âm để trừ)" rules={[{ required: true }]}>
-            <InputNumber precision={0} style={{ width: "100%" }}/>
-          </Form.Item>
-          <Form.Item name="reason" label="Lý do" rules={[{ required: true, min: 3, message: "Tối thiểu 3 ký tự" }]}>
-            <Input/>
-          </Form.Item>
-        </Form>
-      </Modal>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Điều chỉnh điểm</DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={adjustForm.handleSubmit((values) => adjust.mutate(values))}
+          >
+            <NumberField
+              control={adjustForm.control}
+              name="points"
+              label="Điểm (số âm để trừ)"
+              quickThousand={false}
+              rules={{ required: "Nhập điểm" }}
+            />
+            <TextField
+              control={adjustForm.control}
+              name="reason"
+              label="Lý do"
+              className="input-lg"
+              rules={{
+                required: "Nhập lý do",
+                minLength: { value: 3, message: "Tối thiểu 3 ký tự" },
+              }}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={adjust.isPending}>
+                Lưu
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

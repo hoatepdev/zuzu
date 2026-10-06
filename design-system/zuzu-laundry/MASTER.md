@@ -52,7 +52,7 @@ Rules:
 - Red dùng destructive/error.
 - Mỗi state luôn có text; icon chỉ bổ trợ.
 - Không dùng orange làm CTA vì dễ xung đột waiting state.
-- Không dùng raw hex trong screen component; khai báo qua AntD token/CSS token.
+- Không dùng raw hex trong screen component; khai báo qua Tailwind semantic token hoặc CSS token.
 
 Contrast đã kiểm tra:
 
@@ -169,41 +169,36 @@ xl:   1440px     wider management workspace
 - Table chỉ từ 1024px; mobile/tablet dùng card/list.
 - Không fixed width lớn hơn viewport.
 
-## 3. Ant Design mapping
+## 3. shadcn/ui + Tailwind CSS mapping
 
-Giữ AntD 5 làm foundation; không rewrite component primitives.
+Foundation: **Tailwind CSS v4 + shadcn/ui** (source-owned components trong `src/components/ui`), react-hook-form cho form, sonner cho toast, lucide-react cho icon. Không dùng thư viện component đóng như AntD.
 
-```ts
-const theme = {
-  token: {
-    colorPrimary: "#0369a1",
-    colorSuccess: "#166534",
-    colorWarning: "#92400e",
-    colorError: "#b91c1c",
-    colorText: "#0f172a",
-    colorTextSecondary: "#475569",
-    colorBorder: "#cbd5e1",
-    colorBgLayout: "#f8fafc",
-    colorBgContainer: "#ffffff",
-    borderRadius: 10,
-    fontSize: 16,
-    controlHeight: 44,
-    controlHeightLG: 52,
-    controlHeightSM: 36
-  }
-};
+Semantic token của shadcn map thẳng vào brand trong `apps/web/src/styles.css`:
+
+```css
+:root {
+  --primary: #0e7c66;        /* ZUZU teal */
+  --primary-foreground: #fffdf6;
+  --background: #f7f3ea;     /* giấy ấm */
+  --foreground: #1a2420;     /* deep ink */
+  --destructive: #c0392b;
+  --border: #e7dfce;
+  --ring: #0e7c66;
+}
 ```
 
 Component policy:
 
-- `Button`: mobile primary cao 52–56px; default action tối thiểu 44px.
-- `Input`, `InputNumber`, `Select`: 48–52px trong staff flow.
-- `Table`: dùng cho management desktop; action compact vẫn có hit area 44px.
-- `Card`: chỉ metric/entity cần boundary; form page không bọc card trên mobile.
-- `Descriptions`: không dùng cho operational order detail; dùng label/value layout riêng.
-- `Segmented`: payment 2 lựa chọn; quick choice dài dùng wrap grid, không horizontal scroll.
-- `Modal`: destructive/admin edit; không dùng cho core mobile flow.
-- `Drawer`: tablet navigation/filter, không dùng thay full page staff task.
+- `Button` (shadcn): size lg = 54px cho mobile primary; mọi size tối thiểu 44px.
+- `Input`/`Textarea` + class `.input-lg` (54px) trong staff flow; số tiền dùng `AmountInput` (mono, 64px, hậu tố đ).
+- `Select`: **native `<select>`** style `.service-select` — giữ được selectOption/e2e và mobile picker.
+- `DatePicker`: **native `<input type="date">`** (`.date-input`), cặp Từ/Đến cho range.
+- `Table` (shadcn primitives + `.management-table`): management desktop ≥1024px; mobile dùng card list.
+- `Dialog`/`AlertDialog` (Radix): admin edit/confirm; không dùng cho core mobile flow.
+- `Sheet` (Radix): drawer navigation tablet.
+- `QuickChoice`: grid button + `aria-pressed`, không dùng radio ẩn.
+- `Banner`: thay Alert — tone success/error/warning/info, có action + close.
+- Toast: sonner `<Toaster position="top-center" richColors>`.
 
 ## 4. Interaction rules
 
@@ -217,7 +212,7 @@ Component policy:
 
 ### Keyboard and focus
 
-- Focus ring 3px primary soft + 2px primary outline hoặc equivalent AntD token.
+- Focus ring 3px primary soft + 2px primary outline hoặc `--focus-ring` token.
 - DOM order trùng visual order.
 - Skip link tới `main` trên layout có sidebar.
 - Drawer/modal trả focus về trigger.
@@ -320,7 +315,7 @@ Chỉ tạo khi reuse thực tế:
 Không tạo:
 
 - interface/factory cho một component;
-- wrapper một-một quanh mọi AntD primitive;
+- wrapper một-một quanh mọi shadcn primitive;
 - chart abstraction trước khi có chart thứ hai;
 - animation utility riêng.
 
@@ -419,4 +414,4 @@ Verify at 375, 430, 768, 1024, 1440:
 - Status is never color-only.
 - Keyboard reaches every desktop action with visible focus.
 - Reduced motion works.
-- No new dependency unless existing AntD/native platform cannot cover the need.
+- No new dependency unless existing shadcn/native platform cannot cover the need.

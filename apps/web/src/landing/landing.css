@@ -586,7 +586,7 @@ body {
   font-weight: 600;
 }
 
-.landing-trust-copy li .anticon {
+.landing-trust-copy li svg {
   display: grid;
   place-items: center;
   width: 28px;

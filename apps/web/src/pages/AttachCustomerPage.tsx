@@ -1,16 +1,26 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Alert, Button, Form, Input, Spin } from "antd";
 import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Customer, Order } from "../api/types";
-import { BottomActionBar, PageHeader } from "../components/common";
-import { isPhoneInput, normalizePhone } from "./ReceivePage";
+import {
+  Banner,
+  BottomActionBar,
+  Field,
+  PageHeader,
+  Spinner,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { isPhoneInput, normalizePhone } from "./receive-utils";
+
+type AttachValues = { phone: string; name?: string };
 
 export function AttachCustomerPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const [form] = Form.useForm();
+  const form = useForm<AttachValues>();
   const [phone, setPhone] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>();
@@ -39,7 +49,7 @@ export function AttachCustomerPage() {
   });
 
   const attach = useMutation({
-    mutationFn: (values: { phone: string; name?: string }) =>
+    mutationFn: (values: AttachValues) =>
       api<Order>(`/orders/${id}/attach-customer`, {
         method: "POST",
         body: JSON.stringify({
@@ -53,7 +63,7 @@ export function AttachCustomerPage() {
   const chooseCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
     setPhone(customer.phone);
-    form.setFieldsValue({ phone: customer.phone });
+    form.setValue("phone", customer.phone);
   };
   const notFound =
     searchQuery &&
@@ -66,43 +76,51 @@ export function AttachCustomerPage() {
     <div className="has-bottom-action">
       <PageHeader sub={`Đơn ${id.toUpperCase()}`}>Gắn khách</PageHeader>
       {attach.error && (
-        <Alert
+        <Banner
           className="customer-match"
-          type="error"
-          message={attach.error.message}
-          showIcon
+          tone="error"
+          title={attach.error.message}
         />
       )}
-      <Form
+      <form
         className="task-form"
-        form={form}
-        layout="vertical"
-        onFinish={(values) => attach.mutate(values)}
+        onSubmit={form.handleSubmit((values) => attach.mutate(values))}
       >
-        <Form.Item
+        <Controller
+          control={form.control}
           name="phone"
-          label="Số điện thoại"
-          rules={[{ required: true, message: "Nhập số điện thoại" }]}
-        >
-          <Input
-            autoFocus
-            autoComplete="tel"
-            size="large"
-            inputMode="tel"
-            placeholder="09xxxxxxxx"
-            onChange={(event) => {
-              setPhone(event.target.value);
-              if (
-                selectedCustomer &&
-                normalizePhone(event.target.value) !== selectedCustomer.phone
-              )
-                setSelectedCustomer(undefined);
-            }}
-          />
-        </Form.Item>
+          rules={{ required: "Nhập số điện thoại" }}
+          render={({ field, fieldState }) => (
+            <Field
+              label="Số điện thoại"
+              htmlFor="phone"
+              error={fieldState.error?.message}
+            >
+              <Input
+                id="phone"
+                className="input-lg"
+                autoFocus
+                autoComplete="tel"
+                inputMode="tel"
+                placeholder="09xxxxxxxx"
+                {...field}
+                value={field.value ?? ""}
+                onChange={(event) => {
+                  field.onChange(event.target.value);
+                  setPhone(event.target.value);
+                  if (
+                    selectedCustomer &&
+                    normalizePhone(event.target.value) !== selectedCustomer.phone
+                  )
+                    setSelectedCustomer(undefined);
+                }}
+              />
+            </Field>
+          )}
+        />
         {customers.isFetching && (
           <div className="lookup-state" role="status">
-            <Spin size="small" /> Đang tìm khách...
+            <Spinner className="size-4" /> Đang tìm khách...
           </div>
         )}
         {searchQuery && customers.data?.length && !selectedCustomer ? (
@@ -112,8 +130,9 @@ export function AttachCustomerPage() {
             aria-label="Gợi ý khách hàng"
           >
             {customers.data.map((customer) => (
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 className="customer-suggestion"
                 role="option"
                 key={customer.id}
@@ -122,7 +141,7 @@ export function AttachCustomerPage() {
                 <strong>
                   {customer.name ?? "Khách cũ"} - {customer.phone}
                 </strong>
-              </button>
+              </Button>
             ))}
           </div>
         ) : notFound ? (
@@ -131,30 +150,39 @@ export function AttachCustomerPage() {
           </div>
         ) : null}
         {selectedCustomer ? (
-          <Alert
+          <Banner
             className="customer-match"
-            type="success"
-            message={`${selectedCustomer.name ?? "Khách cũ"} · ${selectedCustomer.totalOrders} đơn`}
-            showIcon
+            tone="success"
+            title={`${selectedCustomer.name ?? "Khách cũ"} · ${selectedCustomer.totalOrders} đơn`}
           />
         ) : notFound ? (
-          <Form.Item name="name" label="Tên khách mới (không bắt buộc)">
-            <Input size="large" placeholder="Nguyễn Văn A" />
-          </Form.Item>
+          <Controller
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <Field label="Tên khách mới (không bắt buộc)" htmlFor="name">
+                <Input
+                  id="name"
+                  className="input-lg"
+                  placeholder="Nguyễn Văn A"
+                  {...field}
+                  value={field.value ?? ""}
+                />
+              </Field>
+            )}
+          />
         ) : null}
         <BottomActionBar>
           <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={attach.isPending}
+            type="submit"
+            size="lg"
+            className="w-full"
             disabled={attach.isPending}
           >
             {attach.isPending ? "ĐANG GẮN KHÁCH..." : "GẮN KHÁCH"}
           </Button>
         </BottomActionBar>
-      </Form>
+      </form>
     </div>
   );
 }

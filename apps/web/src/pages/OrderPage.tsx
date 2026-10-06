@@ -1,27 +1,35 @@
-import { ArrowLeftOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button, Input, Modal } from "antd";
+import { ArrowLeft, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api/client";
 import { Order } from "../api/types";
 import {
+  Banner,
   BottomActionBar,
   EmptyState,
   Money,
   QuickChoice,
   StatusBadge,
 } from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSession } from "../session";
 
-const maskPhone = (phone?: string) =>
-  phone ? `${phone.slice(0, 4)} *** ${phone.slice(-3)}` : "—";
 const paymentLabels: Record<string, string> = {
   CASH: "Tiền mặt",
   BANK_TRANSFER: "Chuyển khoản",
 };
 export function OrderPage() {
-  const { message } = AntApp.useApp();
   const { id = "" } = useParams();
   const queryClient = useQueryClient();
   const session = useSession();
@@ -38,7 +46,7 @@ export function OrderPage() {
     mutationFn: () => api(`/orders/${id}/reprint`, { method: "POST" }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["order", id] });
-      message.success("Đã xếp hàng in lại");
+      toast.success("Đã xếp hàng in lại");
     },
   });
   const returnOrder = useMutation({
@@ -50,7 +58,7 @@ export function OrderPage() {
     onSuccess: (data) => {
       queryClient.setQueryData(["order", id], data);
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
-      message.success("Đã trả đồ và cộng điểm");
+      toast.success("Đã trả đồ và cộng điểm");
     },
   });
   const cancel = useMutation({
@@ -65,7 +73,7 @@ export function OrderPage() {
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       setCancelOpen(false);
       setReason("");
-      message.success("Đã huỷ đơn");
+      toast.success("Đã huỷ đơn");
     },
   });
 
@@ -99,17 +107,11 @@ export function OrderPage() {
         }
         action={
           notFound ? (
-            <Link to="/scan">
-              <Button type="primary" size="large">
-                QUÉT LẠI / NHẬP MÃ
-              </Button>
-            </Link>
+            <Button size="lg" asChild>
+              <Link to="/scan">QUÉT LẠI / NHẬP MÃ</Link>
+            </Button>
           ) : (
-            <Button
-              type="primary"
-              size="large"
-              onClick={() => void order.refetch()}
-            >
+            <Button size="lg" onClick={() => void order.refetch()}>
               THỬ LẠI
             </Button>
           )
@@ -126,40 +128,36 @@ export function OrderPage() {
   return (
     <div className="has-bottom-action">
       {data.printJobs[0]?.status === "FAILED" && (
-        <Alert
+        <Banner
           className="page-alert"
-          type="error"
-          message="In bill thất bại sau 3 lần thử"
-          description={data.printJobs[0].lastError}
-          showIcon
-        />
+          tone="error"
+          title="In bill thất bại sau 3 lần thử"
+        >
+          <p>{data.printJobs[0].lastError}</p>
+        </Banner>
       )}
       {data.notifications[0]?.status === "ERROR" && (
-        <Alert
+        <Banner
           className="page-alert"
-          type="error"
-          message="Gửi Zalo thất bại"
-          description={data.notifications[0].error}
-          showIcon
-        />
+          tone="error"
+          title="Gửi Zalo thất bại"
+        >
+          <p>{data.notifications[0].error}</p>
+        </Banner>
       )}
       {returnOrder.error && (
-        <Alert
+        <Banner
           className="page-alert"
-          type="error"
-          message={returnOrder.error.message}
-          showIcon
-          closable
+          tone="error"
+          title={returnOrder.error.message}
           onClose={() => returnOrder.reset()}
         />
       )}
       {reprint.error && (
-        <Alert
+        <Banner
           className="page-alert"
-          type="error"
-          message={reprint.error.message}
-          showIcon
-          closable
+          tone="error"
+          title={reprint.error.message}
           onClose={() => reprint.reset()}
         />
       )}
@@ -172,7 +170,7 @@ export function OrderPage() {
               to="/orders"
               aria-label="Quay lại danh sách đơn"
             >
-              <ArrowLeftOutlined aria-hidden="true" />
+              <ArrowLeft aria-hidden="true" />
             </Link>
             <h1 className="oh-code">{data.code}</h1>
           </div>
@@ -330,35 +328,33 @@ export function OrderPage() {
           </div>
           <QuickChoice
             className="payment-choice"
-            aria-label="Cách thanh toán"
-            optionType="button"
-            buttonStyle="solid"
+            ariaLabel="Cách thanh toán"
             value={paymentMethod}
             disabled={returnOrder.isPending}
+            onChange={(value) => setPaymentMethod(value)}
             options={[
               { label: "Chuyển khoản", value: "BANK_TRANSFER" },
               { label: "Tiền mặt", value: "CASH" },
             ]}
-            onChange={(event) => setPaymentMethod(event.target.value)}
           />
         </section>
       )}
 
       <div className="order-actions">
         {data.status === "READY_FOR_PICKUP" && !data.payments.length && (
-          <Link to={`/orders/${data.code}/complete`}>
-            <Button size="large" block>
+          <Button size="lg" variant="outline" className="w-full" asChild>
+            <Link to={`/orders/${data.code}/complete`}>
               CHỈNH DỊCH VỤ &amp; GIÁ
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         )}
         {session.data?.role !== "STAFF" &&
           ["PROCESSING", "READY_FOR_PICKUP"].includes(data.status) &&
           !data.payments.length && (
             <Button
-              danger
-              size="large"
-              block
+              variant="destructive"
+              size="lg"
+              className="w-full"
               onClick={() => setCancelOpen(true)}
             >
               HUỶ ĐƠN
@@ -370,37 +366,32 @@ export function OrderPage() {
         <div className="bottom-action-row">
           <Button
             className={hasPrimaryAction ? "bottom-action-side" : ""}
-            size="large"
-            block
-            icon={<PrinterOutlined />}
-            loading={reprint.isPending}
-            disabled={reprint.isPending}
+            size="lg"
+            variant="outline"
             aria-label="In lại bill"
             title="In lại bill"
+            disabled={reprint.isPending}
             onClick={() => reprint.mutate()}
           >
+            <Printer />
             {hasPrimaryAction ? "" : " IN LẠI BILL"}
           </Button>
           {data.status === "PROCESSING" && (
-            <Link to={`/orders/${data.code}/complete`}>
-              <Button type="primary" size="large" block>
+            <Button size="lg" className="flex-1" asChild>
+              <Link to={`/orders/${data.code}/complete`}>
                 NHẬP DỊCH VỤ &amp; GIÁ
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           )}
           {needsCustomer && (
-            <Link to={`/orders/${data.code}/attach-customer`}>
-              <Button type="primary" size="large" block>
-                GẮN KHÁCH
-              </Button>
-            </Link>
+            <Button size="lg" className="flex-1" asChild>
+              <Link to={`/orders/${data.code}/attach-customer`}>GẮN KHÁCH</Link>
+            </Button>
           )}
           {canReturn && (
             <Button
-              type="primary"
-              size="large"
-              block
-              loading={returnOrder.isPending}
+              size="lg"
+              className="flex-1"
               disabled={returnOrder.isPending}
               onClick={() => returnOrder.mutate(paymentMethod)}
             >
@@ -410,31 +401,40 @@ export function OrderPage() {
         </div>
       </BottomActionBar>
 
-      <Modal
-        title="Huỷ đơn"
-        open={cancelOpen}
-        onCancel={() => setCancelOpen(false)}
-        onOk={() => !cancel.isPending && cancel.mutate()}
-        okText="Huỷ đơn"
-        cancelText="Quay lại"
-        okButtonProps={{ danger: true, disabled: reason.trim().length < 3 }}
-        confirmLoading={cancel.isPending}
-      >
-        <label htmlFor="cancel-reason" className="sr-only">
-          Lý do huỷ
-        </label>
-        <Input.TextArea
-          id="cancel-reason"
-          rows={3}
-          placeholder="Lý do huỷ (tối thiểu 3 ký tự)"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          aria-describedby="cancel-reason-hint"
-        />
-        <small id="cancel-reason-hint" className="cancel-reason-hint">
-          Tối thiểu 3 ký tự
-        </small>
-      </Modal>
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Huỷ đơn</DialogTitle>
+          </DialogHeader>
+          <Label htmlFor="cancel-reason" className="sr-only">
+            Lý do huỷ
+          </Label>
+          <Textarea
+            id="cancel-reason"
+            className="text-area"
+            rows={3}
+            placeholder="Lý do huỷ (tối thiểu 3 ký tự)"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            aria-describedby="cancel-reason-hint"
+          />
+          <small id="cancel-reason-hint" className="cancel-reason-hint">
+            Tối thiểu 3 ký tự
+          </small>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelOpen(false)}>
+              Quay lại
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={reason.trim().length < 3 || cancel.isPending}
+              onClick={() => cancel.mutate()}
+            >
+              Huỷ đơn
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,18 +1,11 @@
-import {
-  DeleteOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  Button,
-  Collapse,
-  Form,
-  Input,
-  InputNumber,
-} from "antd";
+import { Plus, RotateCw, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Controller,
+  useFieldArray,
+  useForm,
+} from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order, Service } from "../api/types";
@@ -20,9 +13,21 @@ import {
   AmountInput,
   BottomActionBar,
   EmptyState,
+  Field,
   Money,
+  NumberInput,
   PageHeader,
+  Banner,
 } from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSession } from "../session";
 
 const unitLabel = (unit?: string) =>
@@ -30,13 +35,14 @@ const unitLabel = (unit?: string) =>
 const money = (value: string | number | undefined) =>
   Number(value ?? 0).toLocaleString("vi-VN");
 
- type ItemForm = {
+type ItemForm = {
   id?: string;
   serviceId?: string;
   quantity?: number;
   unitPrice?: number;
   priceAdjustmentReason?: string;
 };
+type CompleteValues = { items: ItemForm[]; discount?: number };
 
 export function CompletePage() {
   const { id = "" } = useParams();
@@ -52,12 +58,18 @@ export function CompletePage() {
     queryFn: () => api<Order>(`/orders/${id}`),
     retry: false,
   });
-  const [form] = Form.useForm<{ items: ItemForm[]; discount?: number }>();
+  const form = useForm<CompleteValues>({
+    defaultValues: { items: [], discount: 0 },
+  });
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
   const initialized = useRef(false);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [showServicePicker, setShowServicePicker] = useState(false);
-  const items = Form.useWatch("items", form) ?? [];
-  const watchedDiscount = Form.useWatch("discount", form);
+  const items = form.watch("items") ?? [];
+  const watchedDiscount = form.watch("discount");
   const discount =
     session.data?.role === "STAFF"
       ? Number(order.data?.discount ?? 0)
@@ -78,11 +90,7 @@ export function CompletePage() {
   );
 
   const complete = useMutation({
-    mutationFn: (values: {
-      items: ItemForm[];
-      discount?: number;
-      expectedUpdatedAt: string;
-    }) =>
+    mutationFn: (values: CompleteValues & { expectedUpdatedAt: string }) =>
       api<Order>(`/orders/${id}/complete`, {
         method: "POST",
         body: JSON.stringify(values),
@@ -97,7 +105,7 @@ export function CompletePage() {
   useEffect(() => {
     if (!order.data || !services.data || initialized.current) return;
     initialized.current = true;
-    form.setFieldsValue({
+    form.reset({
       items: order.data.items.length
         ? order.data.items.map((item) => ({
             id: item.id,
@@ -124,15 +132,37 @@ export function CompletePage() {
         <span />
       </div>
     );
+  if (order.error || services.error)
+    return (
+      <>
+        <PageHeader sub={`Đơn ${id}`}>Dịch vụ & giá</PageHeader>
+        <Banner
+          tone="error"
+          title={(order.error ?? services.error)?.message}
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                void order.refetch();
+                void services.refetch();
+              }}
+            >
+              <RotateCw /> Thử lại
+            </Button>
+          }
+        />
+      </>
+    );
   if (!order.data)
     return (
-      <EmptyState description={order.error?.message ?? "Không tìm thấy đơn"} />
+      <EmptyState description="Không tìm thấy đơn" />
     );
 
-  const addService = (serviceId: string, add: (item?: ItemForm) => void, nextIndex: number) => {
+  const addService = (serviceId: string, nextIndex: number) => {
     const service = serviceById.get(serviceId);
     if (!service) return;
-    add({
+    append({
       serviceId,
       quantity: service.unit === "KG" ? undefined : 1,
       unitPrice: Number(service.price),
@@ -146,294 +176,311 @@ export function CompletePage() {
       <PageHeader sub={`Đơn ${order.data.code}`}>
         {adjusting ? "Chỉnh dịch vụ & giá" : "Dịch vụ & giá"}
       </PageHeader>
-      {services.error && (
-        <Alert
-          className="customer-match"
-          type="error"
-          message={services.error.message}
-          showIcon
-        />
-      )}
       {complete.error && (
-        <Alert
+        <Banner
           className="customer-match"
-          type="error"
-          message={complete.error.message}
-          showIcon
+          tone="error"
+          title={complete.error.message}
           action={
-            <Button
-              type="text"
-              size="small"
-              icon={<ReloadOutlined />}
-              onClick={() => void order.refetch()}
-            >
-              Tải lại đơn
+            <Button type="button" variant="ghost" onClick={() => void order.refetch()}>
+              <RotateCw /> Tải lại đơn
             </Button>
           }
         />
       )}
-      <Form
+      <form
         className="task-form complete-form"
-        form={form}
-        layout="vertical"
-        onFinish={(values) =>
-          complete.mutate({
-            ...values,
-            items: values.items ?? [],
-            ...(session.data?.role === "STAFF"
-              ? {}
-              : { discount: values.discount ?? 0 }),
-            expectedUpdatedAt: order.data!.updatedAt,
-          })
-        }
-        onFinishFailed={({ errorFields }) => {
-          const itemIndex = errorFields[0]?.name[1];
-          if (typeof itemIndex === "number") setExpandedIndex(itemIndex);
-        }}
+        onSubmit={form.handleSubmit(
+          (values) =>
+            complete.mutate({
+              ...values,
+              items: values.items ?? [],
+              ...(session.data?.role === "STAFF"
+                ? {}
+                : { discount: values.discount ?? 0 }),
+              expectedUpdatedAt: order.data!.updatedAt,
+            }),
+          (errors) => {
+            const index = Number(
+              Object.keys(errors.items ?? {})[0]?.split(".")[1],
+            );
+            if (!Number.isNaN(index)) setExpandedIndex(index);
+          },
+        )}
       >
-        <Form.List name="items">
-          {(fields, { add, remove }) => (
-            <section className="item-editor-list">
-              <div className="section-heading">
-                <small>Chạm một dòng để sửa</small>
-              </div>
-              {fields.map((field) => {
-                const current = items[field.name] ?? {};
-                const service = serviceById.get(current.serviceId ?? "");
-                const original = order.data?.items.find(
-                  (item) => item.id === current.id,
-                );
-                const unit = service?.unit ?? original?.unit;
-                const base =
-                  original && original.serviceId === current.serviceId
-                    ? original.baseUnitPrice
-                    : service?.price;
-                const price = Number(current.unitPrice ?? base ?? 0);
-                const quantity = Number(current.quantity ?? 0);
-                const lineTotal = quantity * price;
-                const adjusted = base !== undefined && price !== Number(base);
-                const expanded = expandedIndex === field.name;
+        <section className="item-editor-list">
+          <div className="section-heading">
+            <small>Chạm một dòng để sửa</small>
+          </div>
+          {fields.map((field, index) => {
+            const current = items[index] ?? {};
+            const service = serviceById.get(current.serviceId ?? "");
+            const original = order.data?.items.find(
+              (item) => item.id === current.id,
+            );
+            const unit = service?.unit ?? original?.unit;
+            const base =
+              original && original.serviceId === current.serviceId
+                ? original.baseUnitPrice
+                : service?.price;
+            const price = Number(current.unitPrice ?? base ?? 0);
+            const quantity = Number(current.quantity ?? 0);
+            const lineTotal = quantity * price;
+            const adjusted = base !== undefined && price !== Number(base);
+            const expanded = expandedIndex === index;
 
-                return (
-                  <article
-                    className={`item-editor-card ${expanded ? "expanded" : ""}`}
-                    key={field.key}
-                  >
-                    <Form.Item name={[field.name, "id"]} hidden>
-                      <Input />
-                    </Form.Item>
-                    <button
-                      hidden={expanded}
-                      className="service-summary"
-                        type="button"
-                        onClick={() => setExpandedIndex(field.name)}
-                        aria-label={`Sửa ${service?.name ?? "dịch vụ"}`}
+            return (
+              <article
+                className={`item-editor-card ${expanded ? "expanded" : ""}`}
+                key={field.id}
+              >
+                <input type="hidden" {...form.register(`items.${index}.id`)} />
+                <Button
+                  hidden={expanded}
+                  className="service-summary"
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setExpandedIndex(index)}
+                  aria-label={`Sửa ${service?.name ?? "dịch vụ"}`}
+                >
+                  <span className="service-summary-main">
+                    <strong>{service?.name ?? "Chưa chọn dịch vụ"}</strong>
+                    <small>
+                      {quantity || "—"} {unitLabel(unit)} × {money(price)}đ
+                    </small>
+                    {adjusted && (
+                      <em>Giá bảng {money(base)}đ · đã điều chỉnh</em>
+                    )}
+                  </span>
+                  <Money value={lineTotal} />
+                </Button>
+                <div className="item-editor-focus" hidden={!expanded}>
+                  <Controller
+                    control={form.control}
+                    name={`items.${index}.serviceId`}
+                    rules={{ required: "Chọn dịch vụ" }}
+                    render={({ field: serviceField, fieldState }) => (
+                      <Field
+                        label="Dịch vụ"
+                        htmlFor={serviceField.name}
+                        error={fieldState.error?.message}
                       >
-                        <span className="service-summary-main">
-                          <strong>{service?.name ?? "Chưa chọn dịch vụ"}</strong>
-                          <small>
-                            {quantity || "—"} {unitLabel(unit)} × {money(price)}đ
-                          </small>
-                          {adjusted && (
-                            <em>Giá bảng {money(base)}đ · đã điều chỉnh</em>
-                          )}
-                        </span>
-                        <Money value={lineTotal} />
-                      </button>
-                      <div className="item-editor-focus" hidden={!expanded}>
-                        <Form.Item
-                          name={[field.name, "serviceId"]}
-                          label="Dịch vụ"
-                          rules={[{ required: true, message: "Chọn dịch vụ" }]}
-                        >
-                          <select
-                            className="service-select"
-                            value={current.serviceId ?? ""}
-                            onChange={(event) => {
-                              const serviceId = event.target.value;
-                              form.setFieldValue(
-                                ["items", field.name, "serviceId"],
-                                serviceId,
+                        <Select
+                          value={serviceField.value}
+                          onValueChange={(value) => {
+                            const selected = serviceById.get(value);
+                            serviceField.onChange(value);
+                            if (selected)
+                              form.setValue(
+                                `items.${index}.unitPrice`,
+                                Number(selected.price),
                               );
-                              const selected = serviceById.get(serviceId);
-                              if (selected) {
-                                form.setFieldValue(
-                                  ["items", field.name, "unitPrice"],
-                                  Number(selected.price),
-                                );
-                              }
-                            }}
+                          }}
+                        >
+                          <SelectTrigger
+                            id={serviceField.name}
+                            className="h-11 w-full"
                           >
+                            <SelectValue placeholder="Chọn dịch vụ" />
+                          </SelectTrigger>
+                          <SelectContent>
                             {services.data?.map((option) => (
-                              <option key={option.id} value={option.id}>
+                              <SelectItem key={option.id} value={option.id}>
                                 {option.name} · {money(option.price)}đ/
                                 {unitLabel(option.unit)}
-                              </option>
+                              </SelectItem>
                             ))}
-                          </select>
-                        </Form.Item>
-                        <div className="item-editor-grid">
-                          <Form.Item
-                            name={[field.name, "quantity"]}
-                            label={unit === "KG" ? "Khối lượng" : "Số lượng"}
-                            rules={[
-                              {
-                                required: true,
-                                type: "number",
-                                min: unit === "KG" ? 0.1 : 1,
-                                message: "Nhập số lượng hợp lệ",
-                              },
-                            ]}
-                          >
-                            <InputNumber
-                              autoFocus={expanded}
-                              className="quantity-input"
-                              size="large"
-                              min={unit === "KG" ? 0.1 : 1}
-                              step={unit === "KG" ? 0.1 : 1}
-                              precision={unit === "KG" ? 1 : 0}
-                              inputMode={unit === "KG" ? "decimal" : "numeric"}
-                              addonAfter={unitLabel(unit)}
-                              style={{ width: "100%" }}
-                            />
-                          </Form.Item>
-                          <Form.Item
-                            name={[field.name, "unitPrice"]}
-                            label="Giá áp dụng"
-                            rules={[
-                              {
-                                required: true,
-                                type: "number",
-                                min: 0,
-                                message: "Nhập giá hợp lệ",
-                              },
-                            ]}
-                          >
-                            <AmountInput min={0} />
-                          </Form.Item>
-                        </div>
-                        <div className="editor-total">
-                          <span>Thành tiền</span>
-                          <Money className="money-hero" value={lineTotal} />
-                        </div>
-                        {adjusted && (
-                          <div className="price-adjustment">
-                            <div>
-                              <span>Giá bảng {money(base)}đ</span>
-                              <span>Giá áp dụng {money(price)}đ</span>
-                              <strong>
-                                Chênh lệch {price - Number(base) > 0 ? "+" : ""}
-                                {money(price - Number(base))}đ
-                              </strong>
-                            </div>
-                            <Button
-                              type="link"
-                              size="small"
-                              onClick={() =>
-                                form.setFieldValue(
-                                  ["items", field.name, "unitPrice"],
-                                  Number(base),
-                                )
-                              }
-                            >
-                              Đặt lại giá bảng
-                            </Button>
-                            <Form.Item
-                              name={[field.name, "priceAdjustmentReason"]}
-                              label="Lý do điều chỉnh (không bắt buộc)"
-                            >
-                              <Input placeholder="Ví dụ: Báo giá riêng" />
-                            </Form.Item>
-                          </div>
-                        )}
-                        <div className="item-editor-actions">
-                          <Button
-                            type="text"
-                            danger
-                            icon={<DeleteOutlined />}
-                            aria-label="Xoá dịch vụ"
-                            onClick={() => {
-                              remove(field.name);
-                              setExpandedIndex(null);
-                            }}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    )}
+                  />
+                  <div className="item-editor-grid">
+                    <Controller
+                      control={form.control}
+                      name={`items.${index}.quantity`}
+                      rules={{
+                        required: "Nhập số lượng hợp lệ",
+                        min:
+                          unit === "KG"
+                            ? { value: 0.1, message: "Nhập số lượng hợp lệ" }
+                            : { value: 1, message: "Nhập số lượng hợp lệ" },
+                      }}
+                      render={({ field: quantityField, fieldState }) => (
+                        <Field
+                          label={unit === "KG" ? "Khối lượng" : "Số lượng"}
+                          htmlFor={quantityField.name}
+                          error={fieldState.error?.message}
+                        >
+                          <NumberInput
+                            id={quantityField.name}
+                            autoFocus={expanded}
+                            decimal={unit === "KG"}
+                            quickThousand={false}
+                            min={unit === "KG" ? 0.1 : 1}
+                            suffix={unitLabel(unit)}
+                            value={quantityField.value}
+                            onChange={quantityField.onChange}
+                            onBlur={quantityField.onBlur}
                           />
-                          <Button
-                            type="primary"
-                            onClick={async () => {
-                              try {
-                                await form.validateFields([
-                                  ["items", field.name, "quantity"],
-                                ]);
-                                setExpandedIndex(null);
-                              } catch {}
-                            }}
-                          >
-                            XONG
-                          </Button>
-                        </div>
-                      </div>
-                  </article>
-                );
-              })}
-              {showServicePicker && (
-                <div className="service-picker" aria-label="Chọn dịch vụ">
-                  <div className="section-heading">
-                    <strong>Chọn dịch vụ</strong>
-                    <small>Giá bảng sẽ được điền sẵn</small>
+                        </Field>
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name={`items.${index}.unitPrice`}
+                      rules={{
+                        required: "Nhập giá hợp lệ",
+                        min: { value: 0, message: "Nhập giá hợp lệ" },
+                      }}
+                      render={({ field: priceField, fieldState }) => (
+                        <Field
+                          label="Giá áp dụng"
+                          htmlFor={priceField.name}
+                          error={fieldState.error?.message}
+                        >
+                          <AmountInput
+                            id={priceField.name}
+                            min={0}
+                            value={priceField.value}
+                            onChange={priceField.onChange}
+                            onBlur={priceField.onBlur}
+                          />
+                        </Field>
+                      )}
+                    />
                   </div>
-                  <div className="service-picker-list">
-                    {services.data?.map((service) => (
-                      <button
+                  <div className="editor-total">
+                    <span>Thành tiền</span>
+                    <Money className="money-hero" value={lineTotal} />
+                  </div>
+                  {adjusted && (
+                    <div className="price-adjustment">
+                      <div>
+                        <span>Giá bảng {money(base)}đ</span>
+                        <span>Giá áp dụng {money(price)}đ</span>
+                        <strong>
+                          Chênh lệch {price - Number(base) > 0 ? "+" : ""}
+                          {money(price - Number(base))}đ
+                        </strong>
+                      </div>
+                      <Button
                         type="button"
-                        className="service-picker-option"
-                        key={service.id}
-                        onClick={() => addService(service.id, add, fields.length)}
+                        variant="link"
+                        size="sm"
+                        onClick={() =>
+                          form.setValue(
+                            `items.${index}.unitPrice`,
+                            Number(base),
+                          )
+                        }
                       >
-                        <strong>{service.name}</strong>
-                        <span>
-                          {money(service.price)}đ/{unitLabel(service.unit)}
-                        </span>
-                      </button>
-                    ))}
+                        Đặt lại giá bảng
+                      </Button>
+                      <Controller
+                        control={form.control}
+                        name={`items.${index}.priceAdjustmentReason`}
+                        render={({ field: reasonField }) => (
+                          <Field
+                            label="Lý do điều chỉnh (không bắt buộc)"
+                            htmlFor={reasonField.name}
+                          >
+                            <Input
+                              id={reasonField.name}
+                              placeholder="Ví dụ: Báo giá riêng"
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter") event.preventDefault();
+                              }}
+                              {...reasonField}
+                              value={reasonField.value ?? ""}
+                            />
+                          </Field>
+                        )}
+                      />
+                    </div>
+                  )}
+                  <div className="item-editor-actions">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Xoá dịch vụ"
+                      onClick={() => {
+                        remove(index);
+                        setExpandedIndex(null);
+                      }}
+                    >
+                      <Trash2 className="text-destructive" />
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        const valid = await form.trigger([
+                          `items.${index}.quantity`,
+                        ]);
+                        if (valid) setExpandedIndex(null);
+                      }}
+                    >
+                      XONG
+                    </Button>
                   </div>
                 </div>
-              )}
-              <Button
-                className="add-service-button"
-                size="large"
-                block
-                icon={<PlusOutlined />}
-                onClick={() => setShowServicePicker((visible) => !visible)}
-              >
-                {showServicePicker ? "ĐÓNG CHỌN DỊCH VỤ" : "THÊM DỊCH VỤ"}
-              </Button>
-            </section>
+              </article>
+            );
+          })}
+          {showServicePicker && (
+            <div className="service-picker" aria-label="Chọn dịch vụ">
+              <div className="section-heading">
+                <strong>Chọn dịch vụ</strong>
+                <small>Giá bảng sẽ được điền sẵn</small>
+              </div>
+              <div className="service-picker-list">
+                {services.data?.map((service) => (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="service-picker-option"
+                    key={service.id}
+                    onClick={() => addService(service.id, fields.length)}
+                  >
+                    <strong>{service.name}</strong>
+                    <span>
+                      {money(service.price)}đ/{unitLabel(service.unit)}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </div>
           )}
-        </Form.List>
+          <Button
+            type="button"
+            className="add-service-button"
+            size="lg"
+            variant="outline"
+            onClick={() => setShowServicePicker((visible) => !visible)}
+          >
+            <Plus />
+            {showServicePicker ? "ĐÓNG CHỌN DỊCH VỤ" : "THÊM DỊCH VỤ"}
+          </Button>
+        </section>
 
         {session.data?.role !== "STAFF" && (
-          <Collapse
-            className="discount-control"
-            ghost
-            items={[
-              {
-                key: "discount",
-                label: "Giảm giá cho đơn",
-                children: (
-                  <Form.Item name="discount">
-                    <InputNumber
-                      inputMode="numeric"
-                      size="large"
-                      min={0}
-                      precision={0}
-                      suffix="đ"
-                      style={{ width: "100%" }}
-                    />
-                  </Form.Item>
-                ),
-              },
-            ]}
-          />
+          <details className="discount-control">
+            <summary>Giảm giá cho đơn</summary>
+            <Controller
+              control={form.control}
+              name="discount"
+              render={({ field: discountField }) => (
+                <AmountInput
+                  id="discount"
+                  min={0}
+                  value={discountField.value}
+                  onChange={discountField.onChange}
+                  onBlur={discountField.onBlur}
+                />
+              )}
+            />
+          </details>
         )}
         <section className="total-preview">
           <span>Tạm tính</span>
@@ -449,11 +496,9 @@ export function CompletePage() {
         </section>
         <BottomActionBar>
           <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={complete.isPending}
+            type="submit"
+            size="lg"
+            className="w-full"
             disabled={complete.isPending || !items.length}
           >
             {complete.isPending
@@ -463,7 +508,7 @@ export function CompletePage() {
                 : "HOÀN THÀNH"}
           </Button>
         </BottomActionBar>
-      </Form>
+      </form>
     </div>
   );
 }

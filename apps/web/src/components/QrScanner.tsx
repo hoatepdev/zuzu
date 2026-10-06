@@ -1,6 +1,7 @@
-import { Alert, Button } from "antd";
 import QrScannerLibrary from "qr-scanner";
 import { useEffect, useRef, useState } from "react";
+import { Banner } from "./common";
+import { Button } from "@/components/ui/button";
 
 export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -74,17 +75,17 @@ export function QrScanner({ onScan }: { onScan: (value: string) => void }) {
         )}
         {error && (
           <div className="camera-error">
-            <Alert
-              type="warning"
-              message="Không mở được camera"
-              description={error}
-              showIcon
+            <Banner
+              tone="warning"
+              title="Không mở được camera"
               action={
-                <Button size="large" onClick={retry}>
+                <Button size="lg" onClick={retry}>
                   THỬ LẠI
                 </Button>
               }
-            />
+            >
+              <p>{error}</p>
+            </Banner>
           </div>
         )}
       </div>

@@ -3,15 +3,28 @@ import { expect, test } from "@playwright/test";
 const username = process.env.E2E_USERNAME ?? "staff";
 const password = process.env.E2E_PASSWORD ?? "zuzu123";
 
+// API giới hạn /auth/login 5 lần/phút; cache cookie theo tài khoản để suite không bị 429
+const sessionCache = new Map<
+  string,
+  Awaited<ReturnType<import("@playwright/test").BrowserContext["storageState"]>>
+>();
+
 async function login(
   page: import("@playwright/test").Page,
   loginUsername = username,
   loginPassword = password,
 ) {
+  const cached = sessionCache.get(loginUsername);
+  if (cached) {
+    await page.context().addCookies(cached.cookies);
+    return;
+  }
   await page.goto("/login");
   await page.getByLabel(/tài khoản|số điện thoại/i).fill(loginUsername);
   await page.getByLabel(/mật khẩu/i).fill(loginPassword);
   await page.getByRole("button", { name: /đăng nhập/i }).click();
+  await page.waitForURL(/staff|dashboard|home/);
+  sessionCache.set(loginUsername, await page.context().storageState());
 }
 
 test("staff can log in", async ({ page }) => {
@@ -55,9 +68,10 @@ test("manager can select an order status", async ({ page }) => {
   await page.goto("/orders");
 
   const status = page.getByRole("combobox", { name: "Trạng thái" });
-  await expect(status.getByRole("option", { name: "Đang xử lý" })).toHaveCount(1);
-  await status.selectOption("PROCESSING");
-  await expect(status).toHaveValue("PROCESSING");
-  await status.selectOption("");
-  await expect(status).toHaveValue("");
+  await status.click();
+  await page.getByRole("option", { name: "Đang xử lý" }).click();
+  await expect(status).toHaveText("Đang xử lý");
+  await status.click();
+  await page.getByRole("option", { name: "Tất cả" }).click();
+  await expect(status).toHaveText("Tất cả");
 });

@@ -1,32 +1,56 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  App as AntApp,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Switch,
-  Table,
-  Tag,
-} from "antd";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { api } from "../api/client";
 import { Service } from "../api/types";
-import { Money, PageHeader } from "../components/common";
+import {
+  Banner,
+  Money,
+  NumberField,
+  PageHeader,
+  SelectField,
+  Spinner,
+  SwitchField,
+  TextField,
+} from "../components/common";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+type ServiceForm = {
+  stt: number;
+  name: string;
+  unit: "KG" | "ITEM" | "PAIR";
+  price: number;
+  isDefault: boolean;
+  active?: boolean;
+};
 
 export function ServicesPage() {
-  const { message } = AntApp.useApp();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Partial<Service>>();
-  const [form] = Form.useForm();
+  const form = useForm<ServiceForm>();
   const query = useQuery({
     queryKey: ["services", "all"],
     queryFn: () => api<Service[]>("/services/all"),
   });
   const save = useMutation({
-    mutationFn: (values: Partial<Service>) =>
+    mutationFn: (values: ServiceForm) =>
       editing?.id
         ? api<Service>(`/services/${editing.id}`, {
             method: "PATCH",
@@ -39,13 +63,29 @@ export function ServicesPage() {
     onSuccess: () => {
       setEditing(undefined);
       void qc.invalidateQueries({ queryKey: ["services"] });
-      message.success("Đã lưu bảng giá");
+      toast.success("Đã lưu bảng giá");
     },
   });
   const edit = (service?: Service) => {
     setEditing(service ?? {});
-    form.setFieldsValue(
-      service ?? { stt: (query.data?.length ?? 0) + 1, unit: "KG", active: true, isDefault: false },
+    form.reset(
+      service
+        ? {
+            stt: service.stt,
+            name: service.name,
+            unit: service.unit,
+            price: Number(service.price),
+            isDefault: service.isDefault,
+            active: service.active,
+          }
+        : {
+            stt: (query.data?.length ?? 0) + 1,
+            name: "",
+            unit: "KG",
+            price: undefined as unknown as number,
+            isDefault: false,
+            active: true,
+          },
     );
   };
 
@@ -53,56 +93,143 @@ export function ServicesPage() {
     <>
       <PageHeader
         sub="Dịch vụ và đơn giá"
-        extra={<Button type="primary" onClick={() => edit()}>+ DỊCH VỤ</Button>}
+        extra={
+          <Button onClick={() => edit()}>+ DỊCH VỤ</Button>
+        }
       >
         Bảng giá
       </PageHeader>
-      <Table
-        className="management-table"
-        rowKey="id"
-        loading={query.isLoading}
-        dataSource={query.data}
-        pagination={false}
-        columns={[
-          { title: "STT", dataIndex: "stt", width: 80 },
-          { title: "Tên", dataIndex: "name" },
-          { title: "Đơn vị", dataIndex: "unit", render: (v: string) => v === "KG" ? "Kg" : v === "PAIR" ? "Đôi" : "Món" },
-          { title: "Giá", dataIndex: "price", render: (v: string) => <Money value={v} /> },
-          { title: "Mặc định chọn", dataIndex: "isDefault", render: (value: boolean) => value ? <Tag color="green">Mặc định</Tag> : null },
-          { title: "Trạng thái", render: (_, r) => <Tag color={r.active ? "green" : "default"}>{r.active ? "Đang dùng" : "Đã tắt"}</Tag> },
-          { title: "", render: (_, r) => <Button onClick={() => edit(r)}>Sửa</Button> },
-        ]}
-      />
-      <Modal
-        title={editing?.id ? "Sửa dịch vụ" : "Thêm dịch vụ"}
+      {query.error && <Banner tone="error" title={query.error.message} />}
+      {save.error && <Banner tone="error" title={save.error.message} />}
+      {query.error ? null : query.isLoading ? (
+        <div className="center">
+          <Spinner className="size-6" />
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <Table className="management-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead>STT</TableHead>
+                <TableHead>Tên</TableHead>
+                <TableHead>Đơn vị</TableHead>
+                <TableHead>Giá</TableHead>
+                <TableHead>Mặc định chọn</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(query.data ?? []).map((service) => (
+                <TableRow key={service.id}>
+                  <TableCell>{service.stt}</TableCell>
+                  <TableCell>{service.name}</TableCell>
+                  <TableCell>
+                    {service.unit === "KG"
+                      ? "Kg"
+                      : service.unit === "PAIR"
+                        ? "Đôi"
+                        : "Món"}
+                  </TableCell>
+                  <TableCell>
+                    <Money value={service.price} />
+                  </TableCell>
+                  <TableCell>
+                    {service.isDefault && (
+                      <Badge className="status-badge st-COMPLETED">
+                        Mặc định
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={`status-badge ${service.active ? "st-PROCESSING" : "st-CANCELLED"}`}
+                    >
+                      {service.active ? "Đang dùng" : "Đã tắt"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="outline" onClick={() => edit(service)}>
+                      Sửa
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <Dialog
         open={!!editing}
-        onCancel={() => setEditing(undefined)}
-        onOk={() => form.submit()}
-        confirmLoading={save.isPending}
+        onOpenChange={(open) => {
+          if (!open) setEditing(undefined);
+        }}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => save.mutate(values)}>
-          <Form.Item name="stt" label="STT" rules={[{ required: true }]}>
-            <InputNumber min={1} precision={0} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="name" label="Tên" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="unit" label="Đơn vị" rules={[{ required: true }]}>
-            <Select options={["KG", "ITEM", "PAIR"].map((value) => ({ value, label: value }))} />
-          </Form.Item>
-          <Form.Item name="price" label="Giá" rules={[{ required: true }]}>
-            <InputNumber min={1} precision={0} addonAfter="đ" style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="isDefault" label="Mặc định chọn" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          {editing?.id && (
-            <Form.Item name="active" label="Đang sử dụng" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          )}
-        </Form>
-      </Modal>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing?.id ? "Sửa dịch vụ" : "Thêm dịch vụ"}</DialogTitle>
+          </DialogHeader>
+          <form
+            className="task-form"
+            onSubmit={form.handleSubmit((values) => {
+              const { active, ...rest } = values;
+              save.mutate(editing?.id ? { ...rest, active } : rest);
+            })}
+          >
+            <NumberField
+              control={form.control}
+              name="stt"
+              label="STT"
+              min={1}
+              quickThousand={false}
+              rules={{ required: "Nhập STT" }}
+            />
+            <TextField
+              control={form.control}
+              name="name"
+              label="Tên"
+              className="input-lg"
+              rules={{ required: "Nhập tên dịch vụ" }}
+            />
+            <SelectField
+              control={form.control}
+              name="unit"
+              label="Đơn vị"
+              options={[
+                { value: "KG", label: "Kg" },
+                { value: "ITEM", label: "Món" },
+                { value: "PAIR", label: "Đôi" },
+              ]}
+              rules={{ required: "Chọn đơn vị" }}
+            />
+            <NumberField
+              control={form.control}
+              name="price"
+              label="Giá"
+              min={1}
+              suffix="đ"
+              rules={{ required: "Nhập giá" }}
+            />
+            <SwitchField
+              control={form.control}
+              name="isDefault"
+              label="Mặc định chọn"
+            />
+            {editing?.id && (
+              <SwitchField
+                control={form.control}
+                name="active"
+                label="Đang sử dụng"
+              />
+            )}
+            <DialogFooter>
+              <Button type="submit" disabled={save.isPending}>
+                Lưu
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

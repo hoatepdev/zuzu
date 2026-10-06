@@ -1,18 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
-import { Alert, DatePicker, Input, Spin, Table } from "antd";
-import type { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order, OrderStatus, Page } from "../api/types";
 import {
+  Banner,
   EmptyState,
   Money,
   OrderCard,
   PageHeader,
+  Pager,
   QuickChoice,
+  Spinner,
   StatusBadge,
 } from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSession } from "../session";
 
 const statusOptions = [
@@ -32,20 +51,25 @@ export function OrdersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const management = session.data?.role !== "STAFF";
   const initialStatus = searchParams.get("status") as OrderStatus | null;
+  const [searchInput, setSearchInput] = useState(
+    () => searchParams.get("search") ?? "",
+  );
   const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [status, setStatus] = useState<OrderStatus | undefined>(() =>
     initialStatus && statusOptions.some((option) => option.value === initialStatus)
       ? initialStatus
       : undefined,
   );
-  const [dates, setDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     const nextSearch = searchParams.get("search") ?? "";
     const nextStatus = searchParams.get("status") as OrderStatus | null;
-    setSearch((current) => current === nextSearch ? current : nextSearch);
-    setStatus((current) => current === nextStatus ? current : nextStatus ?? undefined);
+    setSearchInput((current) => (current === nextSearch ? current : nextSearch));
+    setSearch((current) => (current === nextSearch ? current : nextSearch));
+    setStatus((current) => (current === nextStatus ? current : nextStatus ?? undefined));
   }, [searchParams]);
 
   const updateStaffFilter = (next: { search?: string; status?: OrderStatus }) => {
@@ -62,16 +86,16 @@ export function OrdersPage() {
   const query = new URLSearchParams({ page: String(page), limit: "20" });
   if (search) query.set("search", search);
   if (status) query.set("status", status);
-  if (dates?.[0]) query.set("from", dates[0].format("YYYY-MM-DD"));
-  if (dates?.[1]) query.set("to", dates[1].format("YYYY-MM-DD"));
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
   const orders = useQuery<Order[] | Page<Order>>({
     queryKey: [
       "orders",
       management ? "page" : "list",
       search,
       status,
-      dates?.[0]?.format("YYYY-MM-DD"),
-      dates?.[1]?.format("YYYY-MM-DD"),
+      from,
+      to,
       page,
     ],
     queryFn: () =>
@@ -90,132 +114,162 @@ export function OrdersPage() {
     <>
       <PageHeader>Đơn hàng</PageHeader>
       <div className="filter-bar">
-        <Input.Search
-          size="large"
-          placeholder="Mã đơn, SĐT, tên khách"
-          allowClear
-          enterButton="Tìm đơn"
-          onSearch={(value) => {
+        <form
+          className="search-form"
+          onSubmit={(event) => {
+            event.preventDefault();
             if (management) {
-              setSearch(value);
+              setSearch(searchInput);
               setPage(1);
             } else {
-              updateStaffFilter({ search: value });
+              updateStaffFilter({ search: searchInput });
             }
           }}
-        />
+        >
+          <Input
+            className="input-lg"
+            placeholder="Mã đơn, SĐT, tên khách"
+            aria-label="Tìm đơn hàng"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
+          <Button type="submit" size="lg">
+            Tìm đơn
+          </Button>
+        </form>
         {!management && (
           <QuickChoice
             className="staff-status-filter"
-            optionType="button"
-            buttonStyle="solid"
             options={staffStatusOptions}
             value={status ?? ""}
-            onChange={(event) => updateStaffFilter({ status: event.target.value as OrderStatus | undefined })}
+            onChange={(value) => updateStaffFilter({ status: (value || undefined) as OrderStatus | undefined })}
           />
         )}
         {management && (
           <>
-            <select
-              className="service-select"
-              aria-label="Trạng thái"
-              value={status ?? ""}
-              onChange={(event) => {
-                setStatus((event.target.value || undefined) as OrderStatus | undefined);
+            <Select
+              value={status ?? "ALL"}
+              onValueChange={(value) => {
+                setStatus(
+                  value === "ALL" ? undefined : (value as OrderStatus),
+                );
                 setPage(1);
               }}
             >
-              <option value="">Trạng thái</option>
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <DatePicker.RangePicker
-              size="large"
-              format="DD/MM/YYYY"
-              value={dates}
-              onChange={(value) => {
-                setDates(value);
-                setPage(1);
-              }}
-            />
+              <SelectTrigger
+                className="h-13.5 w-full text-base font-semibold"
+                aria-label="Trạng thái"
+              >
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="range-picker">
+              <Label>
+                <span>Từ ngày</span>
+                <Input
+                  type="date"
+                  className="date-input"
+                  value={from}
+                  max={to || undefined}
+                  onChange={(event) => {
+                    setFrom(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </Label>
+              <Label>
+                <span>Đến ngày</span>
+                <Input
+                  type="date"
+                  className="date-input"
+                  value={to}
+                  min={from || undefined}
+                  onChange={(event) => {
+                    setTo(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </Label>
+            </div>
           </>
         )}
       </div>
       {orders.error && (
-        <Alert
+        <Banner
           className="list-card"
-          type="error"
-          message={orders.error.message}
-          showIcon
+          tone="error"
+          title={orders.error.message}
         />
       )}
-      {orders.isLoading ? (
+      {orders.error ? null : orders.isLoading ? (
         <div className="center">
-          <Spin />
+          <Spinner className="size-6" />
         </div>
       ) : items?.length ? (
         <>
           {management && (
-            <Table<Order>
-              className="desktop-data-table management-table"
-              rowKey="id"
-              dataSource={items}
-              onRow={(order) => ({
-                onClick: () => navigate(`/orders/${order.code}`),
-                onKeyDown: (event) => {
-                  if (event.key === "Enter") navigate(`/orders/${order.code}`);
-                },
-                tabIndex: 0,
-              })}
-              pagination={{
-                current: page,
-                total: (orders.data as Page<Order>).total,
-                pageSize: 20,
-                onChange: setPage,
-                showSizeChanger: false,
-              }}
-              scroll={{ x: 1100 }}
-              columns={[
-                {
-                  title: "Mã đơn",
-                  dataIndex: "code",
-                  render: (value) => (
-                    <strong className="order-code">{value}</strong>
-                  ),
-                },
-                {
-                  title: "Khách hàng",
-                  render: (_, row) => row.customer?.name ?? "Chưa xác định",
-                },
-                {
-                  title: "SĐT",
-                  render: (_, row) => row.customer?.phone ?? "—",
-                },
-                {
-                  title: "Khối lượng",
-                  render: (_, row) => (row.weight ? `${row.weight} kg` : "—"),
-                },
-                {
-                  title: "Thành tiền",
-                  dataIndex: "total",
-                  render: (value) => <Money value={value} />,
-                },
-                {
-                  title: "Trạng thái",
-                  dataIndex: "status",
-                  render: (value) => <StatusBadge status={value} />,
-                },
-                {
-                  title: "Nhận lúc",
-                  dataIndex: "createdAt",
-                  render: (value) => new Date(value).toLocaleString("vi-VN"),
-                },
-                { title: "Nhân viên", render: (_, row) => row.createdBy.name },
-              ]}
-            />
+            <div className="table-wrap desktop-data-table">
+              <Table className="management-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Mã đơn</TableHead>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>SĐT</TableHead>
+                    <TableHead>Khối lượng</TableHead>
+                    <TableHead>Thành tiền</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Nhận lúc</TableHead>
+                    <TableHead>Nhân viên</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((order) => (
+                    <TableRow
+                      key={order.id}
+                      className="row-click"
+                      role="link"
+                      aria-label={`Xem đơn ${order.code}`}
+                      tabIndex={0}
+                      onClick={() => navigate(`/orders/${order.code}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          navigate(`/orders/${order.code}`);
+                        }
+                      }}
+                    >
+                      <TableCell>
+                        <strong className="order-code">{order.code}</strong>
+                      </TableCell>
+                      <TableCell>{order.customer?.name ?? "Chưa xác định"}</TableCell>
+                      <TableCell>{order.customer?.phone ?? "—"}</TableCell>
+                      <TableCell>{order.weight ? `${order.weight} kg` : "—"}</TableCell>
+                      <TableCell>
+                        <Money value={order.total} />
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={order.status} />
+                      </TableCell>
+                      <TableCell>{new Date(order.createdAt).toLocaleString("vi-VN")}</TableCell>
+                      <TableCell>{order.createdBy.name}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pager
+                page={page}
+                total={(orders.data as Page<Order>).total}
+                onChange={setPage}
+              />
+            </div>
           )}
           <div className={`order-list ${management ? "mobile-data-list" : ""}`}>
             {items.map((order) => (

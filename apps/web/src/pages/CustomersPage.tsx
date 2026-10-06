@@ -1,27 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
-import { Input, Spin } from 'antd';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Customer, Page } from '../api/types';
-import { EmptyState, Money, PageHeader } from '../components/common';
+import { Banner, EmptyState, Money, PageHeader, Spinner } from '../components/common';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export function CustomersPage() {
   const [q, setQ] = useState('');
-  const query = useQuery({ queryKey: ['customers', q], queryFn: () => api<Page<Customer>>(`/customers?q=${encodeURIComponent(q)}`) });
+  const [submitted, setSubmitted] = useState('');
+  const query = useQuery({ queryKey: ['customers', submitted], queryFn: () => api<Page<Customer>>(`/customers?q=${encodeURIComponent(submitted)}`) });
   return <>
     <PageHeader sub="Khách quen và lịch sử của họ">Khách hàng</PageHeader>
-    <Input.Search
-      size="large"
-      placeholder="Tên hoặc số điện thoại"
-      allowClear
-      enterButton="Tìm"
-      onSearch={setQ}
-    />
+    <form
+      className="search-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        setSubmitted(q);
+      }}
+    >
+      <Input
+        className="input-lg"
+        placeholder="Tên hoặc số điện thoại"
+        value={q}
+        aria-label="Tìm khách hàng"
+        onChange={(event) => setQ(event.target.value)}
+      />
+      <Button type="submit" size="lg">Tìm</Button>
+    </form>
+    {query.error && <Banner tone="error" title={query.error.message} />}
     <div className="panel">
       {query.isLoading
-        ? <div className="center"><Spin/></div>
-        : query.data?.items.length
+        ? <div className="center"><Spinner className="size-6" /></div>
+        : query.error
+          ? null
+          : query.data?.items.length
           ? query.data.items.map((customer) => (
             <Link key={customer.id} to={`/customers/${customer.id}`} className="cust-row">
               <span className="cust-main">
@@ -34,7 +48,7 @@ export function CustomersPage() {
               </span>
             </Link>
           ))
-          : <EmptyState description={q ? `Không tìm thấy khách “${q}”` : 'Chưa có khách hàng'}/>}
+          : <EmptyState description={submitted ? `Không tìm thấy khách “${submitted}”` : 'Chưa có khách hàng'}/>}
     </div>
   </>;
 }

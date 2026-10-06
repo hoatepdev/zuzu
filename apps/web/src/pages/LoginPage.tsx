@@ -1,22 +1,28 @@
-import { LockOutlined, UserOutlined } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Checkbox, Form, Input } from "antd";
+import { useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { User } from "../api/types";
-import { ZuzuWordmark } from "../components/common";
+import { Banner, CheckboxField, ZuzuWordmark } from "../components/common";
+import { Button } from "@/components/ui/button";
+import { TextField } from "../components/common";
 import { useSession } from "../session";
+
+type LoginValues = {
+  usernameOrPhone: string;
+  password: string;
+  remember?: boolean;
+};
 
 export function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = useSession();
+  const form = useForm<LoginValues>({
+    defaultValues: { usernameOrPhone: "", password: "", remember: true },
+  });
   const login = useMutation({
-    mutationFn: (values: {
-      usernameOrPhone: string;
-      password: string;
-      remember?: boolean;
-    }) =>
+    mutationFn: (values: LoginValues) =>
       api<User>("/auth/login", {
         method: "POST",
         body: JSON.stringify(values),
@@ -57,61 +63,49 @@ export function LoginPage() {
             <p>Nhập tài khoản được chủ cửa hàng cấp để bắt đầu ca làm việc.</p>
           </div>
           {login.error && (
-            <Alert
+            <Banner
               className="customer-match"
-              type="error"
-              message={login.error.message}
-              showIcon
+              tone="error"
+              title={login.error.message}
             />
           )}
-          <Form
+          <form
             className="task-form"
-            layout="vertical"
-            onFinish={(values) => login.mutate(values)}
-            initialValues={{ remember: true }}
+            onSubmit={form.handleSubmit((values) => login.mutate(values))}
           >
-            <Form.Item
+            <TextField
+              control={form.control}
               name="usernameOrPhone"
-              label="Tên đăng nhập hoặc SĐT"
-              rules={[
-                {
-                  required: true,
-                  message: "Nhập tên đăng nhập hoặc số điện thoại",
-                },
-              ]}
-            >
-              <Input
-                autoFocus
-                autoComplete="username"
-                size="large"
-                placeholder="Ví dụ: staff hoặc 0912 345 678"
-                prefix={<UserOutlined />}
-              />
-            </Form.Item>
-            <Form.Item
+              label="Tên đăng nhập hoặc số điện thoại"
+              autoFocus
+              autoComplete="username"
+              className="input-lg"
+              placeholder="Ví dụ: staff hoặc 0912 345 678"
+              rules={{ required: "Nhập tên đăng nhập hoặc số điện thoại" }}
+            />
+            <TextField
+              control={form.control}
               name="password"
               label="Mật khẩu"
-              rules={[{ required: true, message: "Nhập mật khẩu" }]}
-            >
-              <Input.Password
-                autoComplete="current-password"
-                size="large"
-                prefix={<LockOutlined />}
-              />
-            </Form.Item>
-            <Form.Item name="remember" valuePropName="checked">
-              <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-            </Form.Item>
+              type="password"
+              autoComplete="current-password"
+              className="input-lg"
+              rules={{ required: "Nhập mật khẩu" }}
+            />
+            <CheckboxField
+              control={form.control}
+              name="remember"
+              label="Ghi nhớ đăng nhập"
+            />
             <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={login.isPending}
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={login.isPending}
             >
               {login.isPending ? "ĐANG ĐĂNG NHẬP..." : "ĐĂNG NHẬP"}
             </Button>
-          </Form>
+          </form>
         </div>
       </div>
     </main>

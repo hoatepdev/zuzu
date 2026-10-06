@@ -71,10 +71,18 @@ const lazyPage = (page: React.ReactNode) => (
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <Suspense fallback={loading}><LandingPage /></Suspense>,
+    element: (
+      <Suspense fallback={loading}>
+        <LandingPage />
+      </Suspense>
+    ),
   },
   {
-    element: <Suspense fallback={loading}><AdminProviders /></Suspense>,
+    element: (
+      <Suspense fallback={loading}>
+        <AdminProviders />
+      </Suspense>
+    ),
     children: [
       { path: "/login", element: <LoginPage /> },
       {

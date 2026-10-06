@@ -1,28 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  App as AntApp,
-  Avatar,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Space,
-  Tag,
-} from "antd";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { api } from "../api/client";
 import type { ZaloConnection } from "../api/types";
-import { PageHeader } from "../components/common";
+import {
+  Banner,
+  NumberField,
+  PageHeader,
+} from "../components/common";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useSession } from "../session";
 
 const pollingStatuses = new Set(["WAITING_QR", "SCANNED"]);
 
 export function SettingsPage() {
-  const { message } = AntApp.useApp();
   const session = useSession();
   const qc = useQueryClient();
-  const [form] = Form.useForm();
+  const [testPhone, setTestPhone] = useState("");
+  const form = useForm<{ vndPerPoint: number }>();
   const query = useQuery({
     queryKey: ["settings", "loyalty"],
     queryFn: () => api<{ vndPerPoint: number }>("/settings/loyalty"),
@@ -41,7 +39,7 @@ export function SettingsPage() {
       api("/settings/loyalty", { method: "PUT", body: JSON.stringify(values) }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["settings"] });
-      message.success("Đã lưu cài đặt");
+      toast.success("Đã lưu cài đặt");
     },
   });
   const connect = useMutation({
@@ -56,7 +54,7 @@ export function SettingsPage() {
       api<ZaloConnection>("/notifications/zalo/disconnect", { method: "POST" }),
     onSuccess: (data) => {
       qc.setQueryData(["notifications", "zalo"], data);
-      message.success("Đã ngắt kết nối Zalo");
+      toast.success("Đã ngắt kết nối Zalo");
     },
   });
   const test = useMutation({
@@ -65,92 +63,99 @@ export function SettingsPage() {
         method: "POST",
         body: JSON.stringify({ phone }),
       }),
-    onSuccess: () => message.success("Đã gửi tin thử"),
+    onSuccess: () => toast.success("Đã gửi tin thử"),
   });
   useEffect(() => {
-    if (query.data) form.setFieldsValue(query.data);
+    if (query.data) form.reset(query.data);
   }, [query.data, form]);
   const status = zalo.data?.status;
   return (
     <>
-      <PageHeader sub="Kết nối và thông báo">{session.data?.role === "OWNER" ? "Cài đặt" : "Kết nối Zalo"}</PageHeader>
+      <PageHeader sub="Kết nối và thông báo">
+        {session.data?.role === "OWNER" ? "Cài đặt" : "Kết nối Zalo"}
+      </PageHeader>
       {query.error && (
-        <Alert
+        <Banner
           className="customer-match"
-          type="error"
-          message={query.error.message}
-          showIcon
+          tone="error"
+          title={query.error.message}
         />
       )}
       {session.data?.role === "OWNER" && (
         <div className="panel">
           <h2 className="panel-title">Điểm thưởng</h2>
           {save.error && (
-            <Alert
+            <Banner
               className="customer-match"
-              type="error"
-              message={save.error.message}
-              showIcon
+              tone="error"
+              title={save.error.message}
             />
           )}
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={(values) => save.mutate(values)}
-        >
-          <Form.Item
-            name="vndPerPoint"
-            label="Số tiền mỗi 1 điểm (VND)"
-            rules={[{ required: true }]}
-            help="Khách được 1 điểm cho mỗi mốc tiền này trên đơn đã trả."
+          <form
+            className="task-form"
+            onSubmit={form.handleSubmit((values) => save.mutate(values))}
           >
-            <InputNumber
+            <NumberField
+              control={form.control}
+              name="vndPerPoint"
+              label="Số tiền mỗi 1 điểm (VND)"
               min={1}
-              precision={0}
-              addonAfter="đ/điểm"
-              style={{ width: "100%" }}
+              quickThousand={false}
+              suffix="đ/điểm"
+              hint="Khách được 1 điểm cho mỗi mốc tiền này trên đơn đã trả."
+              rules={{ required: "Nhập số tiền mỗi điểm" }}
             />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={save.isPending}>
-            LƯU
-          </Button>
-          </Form>
+            <Button type="submit" disabled={save.isPending}>
+              LƯU
+            </Button>
+          </form>
         </div>
       )}
       <div className="panel zalo-settings">
         <h2 className="panel-title">Kết nối Zalo</h2>
         {zalo.error && (
-          <Alert type="error" message={zalo.error.message} showIcon />
+          <Banner tone="error" title={zalo.error.message} />
         )}
-        {status === "CONNECTED" && zalo.data?.account ? (
+        {zalo.error ? null : zalo.isLoading ? (
+          <div className="center" role="status">Đang tải trạng thái kết nối...</div>
+        ) : status === "CONNECTED" && zalo.data?.account ? (
           <>
-            <Tag color="success">● Đã kết nối</Tag>
+            <Badge className="status-badge st-COMPLETED">● Đã kết nối</Badge>
             <div className="zalo-account">
               {zalo.data.account.avatar && (
-                <Avatar src={zalo.data.account.avatar} />
+                <img
+                  src={zalo.data.account.avatar}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="avatar"
+                />
               )}
               <strong>{zalo.data.account.displayName}</strong>
             </div>
-            <Form
-              layout="inline"
-              onFinish={(values: { phone: string }) =>
-                test.mutate(values.phone)
-              }
+            <form
+              className="zalo-test-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (testPhone.trim()) test.mutate(testPhone.trim());
+              }}
             >
-              <Form.Item
-                name="phone"
-                rules={[{ required: true, message: "Nhập số điện thoại Zalo" }]}
-              >
-                <Input placeholder="Số điện thoại nhận tin thử" />
-              </Form.Item>
-              <Button htmlType="submit" loading={test.isPending}>
+              <Input
+                className="input-lg"
+                placeholder="Số điện thoại nhận tin thử"
+                value={testPhone}
+                onChange={(event) => setTestPhone(event.target.value)}
+                aria-label="Số điện thoại nhận tin thử"
+              />
+              <Button type="submit" disabled={test.isPending}>
                 Gửi tin thử
               </Button>
-            </Form>
+            </form>
             <Button
-              danger
+              type="button"
+              variant="destructive"
               onClick={() => disconnect.mutate()}
-              loading={disconnect.isPending}
+              disabled={disconnect.isPending}
             >
               Ngắt kết nối
             </Button>
@@ -161,38 +166,29 @@ export function SettingsPage() {
             <p>Mở Zalo trên điện thoại và quét mã QR để kết nối.</p>
           </div>
         ) : status === "SCANNED" ? (
-          <Alert
-            type="info"
-            message="Đã quét QR"
-            description="Vui lòng xác nhận đăng nhập trên điện thoại."
-            showIcon
-          />
+          <Banner
+            tone="info"
+            title="Đã quét QR"
+          >
+            <p>Vui lòng xác nhận đăng nhập trên điện thoại.</p>
+          </Banner>
         ) : status === "ERROR" || status === "EXPIRED" ? (
-          <Space direction="vertical">
-            <Alert
-              type="error"
-              message={zalo.data?.error ?? "Kết nối Zalo chưa thành công"}
-              showIcon
+          <div className="stack">
+            <Banner
+              tone="error"
+              title={zalo.data?.error ?? "Kết nối Zalo chưa thành công"}
             />
-            <Button
-              type="primary"
-              onClick={() => connect.mutate()}
-              loading={connect.isPending}
-            >
+            <Button type="button" onClick={() => connect.mutate()} disabled={connect.isPending}>
               Thử kết nối lại
             </Button>
-          </Space>
+          </div>
         ) : (
-          <Space direction="vertical">
+          <div className="stack">
             <p>Chưa kết nối</p>
-            <Button
-              type="primary"
-              onClick={() => connect.mutate()}
-              loading={connect.isPending}
-            >
+            <Button type="button" onClick={() => connect.mutate()} disabled={connect.isPending}>
               Kết nối Zalo
             </Button>
-          </Space>
+          </div>
         )}
       </div>
     </>

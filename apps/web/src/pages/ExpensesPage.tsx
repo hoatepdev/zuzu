@@ -1,34 +1,57 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Alert,
-  App as AntApp,
-  Button,
-  DatePicker,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Table,
-  Tag,
-} from "antd";
-import type { Dayjs } from "dayjs";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { EXPENSE_CATEGORIES, Expense, Page } from "../api/types";
-import { AmountInput, Money, PageHeader } from "../components/common";
+import {
+  Banner,
+  Money,
+  NumberField,
+  PageHeader,
+  Pager,
+  TextField,
+} from "../components/common";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function ExpensesPage() {
-  const { message } = AntApp.useApp();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Expense>();
   const [voiding, setVoiding] = useState<Expense>();
-  const [category, setCategory] = useState<string>();
-  const [paymentMethod, setPaymentMethod] = useState<string>();
-  const [dates, setDates] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const [category, setCategory] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
-  const [form] = Form.useForm();
-  const [voidForm] = Form.useForm();
+  const form = useForm<{ amount: number; description: string }>();
+  const voidForm = useForm<{ reason: string }>();
   const params = new URLSearchParams({
     includeVoided: "true",
     page: String(page),
@@ -36,17 +59,10 @@ export function ExpensesPage() {
   });
   if (category) params.set("category", category);
   if (paymentMethod) params.set("paymentMethod", paymentMethod);
-  if (dates?.[0]) params.set("from", dates[0].format("YYYY-MM-DD"));
-  if (dates?.[1]) params.set("to", dates[1].format("YYYY-MM-DD"));
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
   const query = useQuery({
-    queryKey: [
-      "expenses",
-      page,
-      category,
-      paymentMethod,
-      dates?.[0]?.format("YYYY-MM-DD"),
-      dates?.[1]?.format("YYYY-MM-DD"),
-    ],
+    queryKey: ["expenses", page, category, paymentMethod, from, to],
     queryFn: () => api<Page<Expense>>(`/expenses?${params}`),
   });
   const refresh = () => void qc.invalidateQueries({ queryKey: ["expenses"] });
@@ -58,9 +74,9 @@ export function ExpensesPage() {
       }),
     onSuccess: () => {
       setVoiding(undefined);
-      voidForm.resetFields();
+      voidForm.reset();
       refresh();
-      message.success("Đã huỷ khoản chi");
+      toast.success("Đã huỷ khoản chi");
     },
   });
   const update = useMutation({
@@ -71,16 +87,17 @@ export function ExpensesPage() {
       }),
     onSuccess: () => {
       setEditing(undefined);
+      form.reset();
       refresh();
-      message.success("Đã cập nhật");
+      toast.success("Đã cập nhật");
     },
   });
   const edit = (expense: Expense) => {
-    setEditing(expense);
-    form.setFieldsValue({
+    form.reset({
       amount: Number(expense.amount),
       description: expense.description,
     });
+    setEditing(expense);
   };
 
   return (
@@ -88,182 +105,251 @@ export function ExpensesPage() {
       <PageHeader
         sub="Các khoản chi của cửa hàng"
         extra={
-          <Link to="/expenses/new">
-            <Button type="primary" size="large">
-              + CHI TIỀN
-            </Button>
-          </Link>
+          <Button size="lg" asChild>
+            <Link to="/expenses/new">+ CHI TIỀN</Link>
+          </Button>
         }
       >
         Chi phí
       </PageHeader>
       <div className="filter-bar">
         <Select
-          size="large"
-          allowClear
-          placeholder="Nhóm chi"
-          options={EXPENSE_CATEGORIES.map((value) => ({ value, label: value }))}
-          value={category}
-          onChange={(value) => {
-            setCategory(value);
+          value={category || "ALL"}
+          onValueChange={(value) => {
+            setCategory(value === "ALL" ? "" : value);
             setPage(1);
           }}
-        />
+        >
+          <SelectTrigger
+            className="h-13.5 w-full text-base font-semibold"
+            aria-label="Nhóm chi"
+          >
+            <SelectValue placeholder="Nhóm chi" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tất cả</SelectItem>
+            {EXPENSE_CATEGORIES.map((value) => (
+              <SelectItem key={value} value={value}>
+                {value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
-          size="large"
-          allowClear
-          placeholder="Thanh toán"
-          options={[
-            { value: "CASH", label: "Tiền mặt" },
-            { value: "BANK_TRANSFER", label: "Chuyển khoản" },
-          ]}
-          value={paymentMethod}
-          onChange={(value) => {
-            setPaymentMethod(value);
+          value={paymentMethod || "ALL"}
+          onValueChange={(value) => {
+            setPaymentMethod(value === "ALL" ? "" : value);
             setPage(1);
           }}
-        />
-        <DatePicker.RangePicker
-          size="large"
-          format="DD/MM/YYYY"
-          value={dates}
-          onChange={(value) => {
-            setDates(value);
-            setPage(1);
-          }}
-        />
+        >
+          <SelectTrigger
+            className="h-13.5 w-full text-base font-semibold"
+            aria-label="Thanh toán"
+          >
+            <SelectValue placeholder="Thanh toán" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tất cả</SelectItem>
+            <SelectItem value="CASH">Tiền mặt</SelectItem>
+            <SelectItem value="BANK_TRANSFER">Chuyển khoản</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="range-picker">
+          <Label htmlFor="expenses-from">
+            <span>Từ ngày</span>
+            <Input
+              id="expenses-from"
+              type="date"
+              className="date-input"
+              value={from}
+              max={to || undefined}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setPage(1);
+              }}
+            />
+          </Label>
+          <Label htmlFor="expenses-to">
+            <span>Đến ngày</span>
+            <Input
+              id="expenses-to"
+              type="date"
+              className="date-input"
+              value={to}
+              min={from || undefined}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setPage(1);
+              }}
+            />
+          </Label>
+        </div>
       </div>
       {query.error && (
-        <Alert type="error" message={query.error.message} showIcon />
+        <Banner tone="error" title={query.error.message} />
       )}
-      <Table
-        className="management-table"
-        rowKey="id"
-        loading={query.isLoading}
-        dataSource={query.data?.items}
-        pagination={{
-          current: page,
-          total: query.data?.total,
-          pageSize: 20,
-          onChange: setPage,
-          showSizeChanger: false,
-        }}
-        scroll={{ x: 900 }}
-        columns={[
-          {
-            title: "Ngày",
-            dataIndex: "expenseDate",
-            render: (value: string) =>
-              new Date(value).toLocaleDateString("vi-VN"),
-          },
-          { title: "Nhóm", dataIndex: "category" },
-          { title: "Nội dung", dataIndex: "description" },
-          {
-            title: "Thanh toán",
-            dataIndex: "paymentMethod",
-            render: (value: string) =>
-              value === "CASH" ? "Tiền mặt" : "Chuyển khoản",
-          },
-          {
-            title: "Số tiền",
-            dataIndex: "amount",
-            render: (value: string) => <Money value={value} />,
-          },
-          {
-            title: "Trạng thái",
-            render: (_, row) =>
-              row.voidedAt ? (
-                <Tag>Đã huỷ</Tag>
-              ) : (
-                <Tag color="green">Hợp lệ</Tag>
-              ),
-          },
-          {
-            title: "",
-            render: (_, row) =>
-              !row.voidedAt && (
-                <div className="table-actions">
-                  <Button size="small" onClick={() => edit(row)}>
-                    Sửa
-                  </Button>
-                  <Button danger size="small" onClick={() => setVoiding(row)}>
-                    Huỷ
-                  </Button>
-                </div>
-              ),
-          },
-        ]}
-      />
-      <Modal
-        title="Sửa khoản chi"
+      {query.isLoading ? (
+        <div className="table-wrap">
+          <Table className="management-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ngày</TableHead>
+                <TableHead>Nhóm</TableHead>
+                <TableHead>Nội dung</TableHead>
+                <TableHead>Thanh toán</TableHead>
+                <TableHead>Số tiền</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell colSpan={7}>
+                    <Skeleton className="skeleton-line" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <Table className="management-table">
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ngày</TableHead>
+                <TableHead>Nhóm</TableHead>
+                <TableHead>Nội dung</TableHead>
+                <TableHead>Thanh toán</TableHead>
+                <TableHead>Số tiền</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(query.data?.items ?? []).map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    {new Date(row.expenseDate).toLocaleDateString("vi-VN")}
+                  </TableCell>
+                  <TableCell>{row.category}</TableCell>
+                  <TableCell>{row.description}</TableCell>
+                  <TableCell>
+                    {row.paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản"}
+                  </TableCell>
+                  <TableCell>
+                    <Money value={row.amount} />
+                  </TableCell>
+                  <TableCell>
+                    {row.voidedAt ? (
+                      <Badge className="status-badge st-CANCELLED">Đã huỷ</Badge>
+                    ) : (
+                      <Badge className="status-badge st-COMPLETED">Hợp lệ</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {!row.voidedAt && (
+                      <div className="table-actions">
+                        <Button size="sm" variant="outline" onClick={() => edit(row)}>
+                          Sửa
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setVoiding(row)}
+                        >
+                          Huỷ
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Pager page={page} total={query.data?.total} onChange={setPage} />
+        </div>
+      )}
+      <Dialog
         open={!!editing}
-        onCancel={() => setEditing(undefined)}
-        onOk={() => form.submit()}
-        okText="Lưu"
-        cancelText="Quay lại"
-        confirmLoading={update.isPending}
+        onOpenChange={(open) => {
+          if (!open) setEditing(undefined);
+        }}
       >
-        {update.error && (
-          <Alert
-            className="customer-match"
-            type="error"
-            message={update.error.message}
-            showIcon
-          />
-        )}
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={(values) => update.mutate(values)}
-        >
-          <Form.Item name="amount" label="Số tiền" rules={[{ required: true }]}>
-            <AmountInput />
-          </Form.Item>
-          <Form.Item
-            name="description"
-            label="Nội dung"
-            rules={[{ required: true }]}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa khoản chi</DialogTitle>
+          </DialogHeader>
+          {update.error && (
+            <Banner tone="error" title={update.error.message} />
+          )}
+          <form
+            className="task-form"
+            onSubmit={form.handleSubmit((values) => update.mutate(values))}
           >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
-      <Modal
-        title="Huỷ khoản chi"
+            <NumberField
+              control={form.control}
+              name="amount"
+              label="Số tiền"
+              rules={{ required: "Nhập số tiền" }}
+            />
+            <TextField
+              control={form.control}
+              name="description"
+              label="Nội dung"
+              className="input-lg"
+              rules={{ required: "Nhập nội dung" }}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={update.isPending}>
+                Lưu
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
         open={!!voiding}
-        onCancel={() => setVoiding(undefined)}
-        onOk={() => voidForm.submit()}
-        okText="Huỷ khoản chi"
-        cancelText="Quay lại"
-        okButtonProps={{ danger: true }}
-        confirmLoading={voidExpense.isPending}
+        onOpenChange={(open) => {
+          if (!open) setVoiding(undefined);
+        }}
       >
-        {voidExpense.error && (
-          <Alert
-            className="customer-match"
-            type="error"
-            message={voidExpense.error.message}
-            showIcon
-          />
-        )}
-        <Form
-          form={voidForm}
-          layout="vertical"
-          onFinish={({ reason }) =>
-            voidExpense.mutate({ id: voiding!.id, reason })
-          }
-        >
-          <Form.Item
-            name="reason"
-            label="Lý do"
-            rules={[
-              { required: true, min: 3, message: "Nhập ít nhất 3 ký tự" },
-            ]}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Huỷ khoản chi</DialogTitle>
+          </DialogHeader>
+          {voidExpense.error && (
+            <Banner tone="error" title={voidExpense.error.message} />
+          )}
+          <form
+            className="task-form"
+            onSubmit={voidForm.handleSubmit(({ reason }) =>
+              voidExpense.mutate({ id: voiding!.id, reason }),
+            )}
           >
-            <Input.TextArea rows={3} />
-          </Form.Item>
-        </Form>
-      </Modal>
+            <TextField
+              control={voidForm.control}
+              name="reason"
+              label="Lý do"
+              className="input-lg"
+              rules={{
+                required: "Nhập lý do",
+                minLength: { value: 3, message: "Nhập ít nhất 3 ký tự" },
+              }}
+            />
+            <DialogFooter>
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={voidExpense.isPending}
+              >
+                Huỷ khoản chi
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

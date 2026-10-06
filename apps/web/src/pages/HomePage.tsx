@@ -1,17 +1,10 @@
-import {
-  CameraOutlined,
-  CheckCircleOutlined,
-  DollarOutlined,
-  PlusOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Button, Spin } from "antd";
+import { ArrowRight, Banknote, Camera, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Order } from "../api/types";
-import { EmptyState, OrderCard } from "../components/common";
+import { Banner, EmptyState, OrderCard, Spinner } from "../components/common";
 import { useSession } from "../session";
 
 const greeting = () => {
@@ -65,23 +58,16 @@ export function HomePage() {
       </div>
 
       {receivedCode && (
-        <Alert
+        <Banner
           className="receive-success"
-          role="status"
-          type="success"
-          showIcon
-          icon={<CheckCircleOutlined />}
-          closable
+          tone="success"
           onClose={() => setReceivedCode(undefined)}
-          message={
-            <>
-              <strong>ĐÃ TẠO {receivedCode}</strong>
-              <span className="receive-success-copy">
-                Bill đang in. <b>Dán bill/QR lên túi đồ.</b>
-              </span>
-            </>
-          }
-        />
+          title={`ĐÃ TẠO ${receivedCode}`}
+        >
+          <span className="receive-success-copy">
+            Bill đang in. <b>Dán bill/QR lên túi đồ.</b>
+          </span>
+        </Banner>
       )}
 
       <div className="home-workspace">
@@ -92,26 +78,26 @@ export function HomePage() {
             </h2>
             <Link to="/receive" className="op-action op-receive">
               <span className="op-icon" aria-hidden="true">
-                <PlusOutlined />
+                <Plus />
               </span>
               <span className="op-copy">
                 <b>Nhận đồ</b>
                 <small>Tạo đơn cho khách trong vài giây</small>
               </span>
               <span className="op-arrow" aria-hidden="true">
-                <RightOutlined />
+                <ArrowRight />
               </span>
             </Link>
             <Link to="/scan" className="op-action op-scan">
               <span className="op-icon" aria-hidden="true">
-                <CameraOutlined />
+                <Camera />
               </span>
               <span className="op-copy">
                 <b>Quét QR</b>
                 <small>Tra đơn bằng mã trên bill</small>
               </span>
               <span className="op-arrow" aria-hidden="true">
-                <RightOutlined />
+                <ArrowRight />
               </span>
             </Link>
           </section>
@@ -141,22 +127,22 @@ export function HomePage() {
             <div className="home-recent-links">
               <Link to="/orders">Xem tất cả</Link>
               <Link to="/expenses/new" className="home-utility">
-                <DollarOutlined /> <span>Chi tiền</span>
+                <Banknote /> <span>Chi tiền</span>
               </Link>
             </div>
           </div>
           {recent.isLoading ? (
             <div className="home-state" role="status" aria-live="polite">
-              <Spin size="small" />
+              <Spinner className="size-4" />
               <span>Đang tải đơn gần đây…</span>
             </div>
           ) : recent.error ? (
             <EmptyState
               description={recent.error.message || "Không tải được đơn gần đây"}
               action={
-                <Button type="link" onClick={() => recent.refetch()}>
+                <Link className="text-link" to="/orders" onClick={() => recent.refetch()}>
                   Thử lại
-                </Button>
+                </Link>
               }
             />
           ) : recent.data?.length ? (
