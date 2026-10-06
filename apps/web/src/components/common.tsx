@@ -1,8 +1,7 @@
 import { Loader2 } from "lucide-react";
-import type {
-  ComponentProps,
-  ReactNode,
-} from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { useRef } from "react";
+import { NumericFormat } from "react-number-format";
 import {
   Controller,
   type Control,
@@ -79,15 +78,14 @@ export function NumberInput({
   quickThousand?: boolean;
   suffix?: string;
 } & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "suffix">) {
-  const parse = (raw: string) => {
-    const cleaned = raw.replace(decimal ? /[^\d.]/g : /\D/g, "");
-    if (!cleaned || cleaned === ".") return undefined;
-    const parsed = Number(cleaned);
-    if (Number.isNaN(parsed)) return undefined;
-    return decimal ? Math.round(parsed * 100) / 100 : Math.round(parsed);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const readValue = () => {
+    const raw = inputRef.current?.value.trim();
+    return raw
+      ? Number(raw.replace(/\./g, "").replace(",", "."))
+      : undefined;
   };
-  const commit = (raw: string) => {
-    let next = parse(raw);
+  const commit = (next?: number) => {
     if (next != null) {
       if (quickThousand && next > 0 && next < 1000) next = quickAmount(next);
       if (min != null && next < min) next = min;
@@ -97,22 +95,28 @@ export function NumberInput({
   };
   return (
     <span className={`amount-shell ${className}`.trim()}>
-      <Input
+      <NumericFormat
         {...props}
+        getInputRef={inputRef}
+        customInput={Input}
         inputMode={decimal ? "decimal" : "numeric"}
-        value={value == null ? "" : Number(value).toLocaleString("vi-VN")}
-        onChange={(event) => {
-          const next = parse(event.target.value);
-          onChange?.(next);
+        value={value ?? ""}
+        thousandSeparator="."
+        decimalSeparator=","
+        decimalScale={decimal ? 2 : 0}
+        allowNegative={false}
+        allowLeadingZeros={false}
+        onValueChange={({ floatValue }, sourceInfo) => {
+          if (sourceInfo.source === "event") onChange?.(floatValue);
         }}
         onBlur={(event) => {
-          commit(event.target.value);
+          commit(readValue());
           onBlur?.(event);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
-            commit(event.currentTarget.value);
+            commit(readValue());
           }
           onKeyDown?.(event);
         }}

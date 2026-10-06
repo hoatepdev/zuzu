@@ -100,6 +100,9 @@
   --shadow-2:
     0 1px 2px rgba(26, 36, 32, 0.04), 0 10px 28px rgba(26, 36, 32, 0.09);
   --focus-ring: 0 0 0 3px rgba(14, 124, 102, 0.22);
+  --chart-revenue: var(--brand);
+  --chart-expenses: var(--error);
+  --chart-grid: var(--line-soft);
   --speed: 150ms;
   --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
 }
@@ -1842,6 +1845,39 @@ h3 {
   font-size: 16px;
   font-weight: 700;
 }
+.revenue-chart {
+  min-height: 260px;
+}
+.chart-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  text-align: center;
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chart-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.chart-dot.revenue { background: var(--chart-revenue); }
+.chart-dot.expenses { background: var(--chart-expenses); }
 .zalo-settings {
   max-width: 680px;
 }
@@ -2671,6 +2707,14 @@ button {
   padding: 8px 2px;
 }
 
+.data-table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 14px 0;
+}
+.data-table-toolbar input {
+  max-width: 240px;
+}
 .table-wrap {
   margin-top: 16px;
   background: var(--surface);
@@ -2702,6 +2746,19 @@ table.management-table {
 }
 .management-table tbody tr.row-click {
   cursor: pointer;
+}
+.data-table-sort {
+  height: auto;
+  min-height: 32px;
+  padding: 0 4px;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-transform: inherit;
+}
+.data-table-sort svg {
+  width: 14px;
+  height: 14px;
 }
 .management-table tbody tr.row-click:hover {
   background: var(--page);

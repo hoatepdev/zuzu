@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Dashboard } from "../api/types";
+import { RevenueChart } from "../components/charts/RevenueChart";
 import {
   Banner,
   Metric,
@@ -31,6 +33,12 @@ export function DashboardPage() {
     queryFn: () => api<Dashboard>(`/dashboard/range?from=${from}&to=${to}`),
   });
   const d = query.data;
+  const reduceMotion = useReducedMotion();
+  const enter = {
+    initial: { opacity: 0, y: reduceMotion ? 0 : 6 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.2 },
+  };
 
   return (
     <>
@@ -82,7 +90,8 @@ export function DashboardPage() {
         </div>
       ) : (
         <>
-          <section
+          <motion.section
+            {...enter}
             className="dashboard-metrics list-card"
             aria-label="Tài chính"
           >
@@ -95,8 +104,9 @@ export function DashboardPage() {
             <Metric label="Lợi nhuận tạm tính">
               <Money value={d?.estimatedProfit} />
             </Metric>
-          </section>
-          <section
+          </motion.section>
+          <motion.section
+            {...enter}
             className="dashboard-metrics list-card"
             aria-label="Vận hành"
           >
@@ -104,8 +114,8 @@ export function DashboardPage() {
             <Metric label="Tổng khối lượng">{d?.kg ?? 0} kg</Metric>
             <Metric label="Đang xử lý">{d?.processing ?? 0}</Metric>
             <Metric label="Chờ khách lấy">{d?.ready ?? 0}</Metric>
-          </section>
-          <section className="panel detail-list" aria-label="Chi tiết">
+          </motion.section>
+          <motion.section {...enter} className="panel detail-list" aria-label="Chi tiết">
             <h2 className="panel-title">Dòng tiền</h2>
             <div className="detail-row">
               <span>Tiền mặt</span>
@@ -131,7 +141,12 @@ export function DashboardPage() {
                 {d?.newCustomers ?? 0} / {d?.returningCustomers ?? 0}
               </strong>
             </div>
-          </section>
+          </motion.section>
+          <motion.section {...enter} className="panel dashboard-chart" aria-labelledby="revenue-chart-title">
+            <h2 id="revenue-chart-title" className="panel-title">Doanh thu theo ngày</h2>
+            {/* TODO: /dashboard/range currently returns aggregates only; never invent chart points. */}
+            <RevenueChart data={[]} />
+          </motion.section>
         </>
       )}
     </>

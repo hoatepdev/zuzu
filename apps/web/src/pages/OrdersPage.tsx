@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
+import { type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Order, OrderStatus, Page } from "../api/types";
+import { DataTable } from "../components/data-table/DataTable";
 import {
   Banner,
   EmptyState,
   Money,
   OrderCard,
   PageHeader,
-  Pager,
   QuickChoice,
   Spinner,
   StatusBadge,
@@ -17,14 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -109,6 +102,17 @@ export function OrdersPage() {
   const items = management
     ? (orders.data as Page<Order> | undefined)?.items
     : (orders.data as Order[] | undefined);
+
+  const columns: ColumnDef<Order>[] = [
+    { accessorKey: "code", header: "Mã đơn", cell: ({ row }) => <strong className="order-code">{row.original.code}</strong>, enableSorting: true },
+    { id: "customer", accessorFn: (row) => row.customer?.name ?? "Chưa xác định", header: "Khách hàng" },
+    { id: "phone", accessorFn: (row) => row.customer?.phone ?? "—", header: "SĐT" },
+    { accessorKey: "weight", header: "Khối lượng", cell: ({ row }) => row.original.weight ? `${row.original.weight} kg` : "—" },
+    { accessorKey: "total", header: "Thành tiền", cell: ({ row }) => <Money value={row.original.total} /> },
+    { accessorKey: "status", header: "Trạng thái", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
+    { accessorKey: "createdAt", header: "Nhận lúc", cell: ({ row }) => new Date(row.original.createdAt).toLocaleString("vi-VN") },
+    { id: "createdBy", accessorFn: (row) => row.createdBy.name, header: "Nhân viên" },
+  ];
 
   return (
     <>
@@ -216,58 +220,15 @@ export function OrdersPage() {
       ) : items?.length ? (
         <>
           {management && (
-            <div className="table-wrap desktop-data-table">
-              <Table className="management-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Mã đơn</TableHead>
-                    <TableHead>Khách hàng</TableHead>
-                    <TableHead>SĐT</TableHead>
-                    <TableHead>Khối lượng</TableHead>
-                    <TableHead>Thành tiền</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Nhận lúc</TableHead>
-                    <TableHead>Nhân viên</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((order) => (
-                    <TableRow
-                      key={order.id}
-                      className="row-click"
-                      role="link"
-                      aria-label={`Xem đơn ${order.code}`}
-                      tabIndex={0}
-                      onClick={() => navigate(`/orders/${order.code}`)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          navigate(`/orders/${order.code}`);
-                        }
-                      }}
-                    >
-                      <TableCell>
-                        <strong className="order-code">{order.code}</strong>
-                      </TableCell>
-                      <TableCell>{order.customer?.name ?? "Chưa xác định"}</TableCell>
-                      <TableCell>{order.customer?.phone ?? "—"}</TableCell>
-                      <TableCell>{order.weight ? `${order.weight} kg` : "—"}</TableCell>
-                      <TableCell>
-                        <Money value={order.total} />
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={order.status} />
-                      </TableCell>
-                      <TableCell>{new Date(order.createdAt).toLocaleString("vi-VN")}</TableCell>
-                      <TableCell>{order.createdBy.name}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <Pager
+            <div className="desktop-data-table">
+              <DataTable
+                columns={columns}
+                data={items}
+                manualPagination
                 page={page}
                 total={(orders.data as Page<Order>).total}
-                onChange={setPage}
+                onPageChange={setPage}
+                onRowClick={(order) => navigate(`/orders/${order.code}`)}
               />
             </div>
           )}
