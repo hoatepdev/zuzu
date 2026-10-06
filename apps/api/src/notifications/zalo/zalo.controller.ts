@@ -9,7 +9,7 @@ import { ZaloConnectionService } from './zalo-connection.service';
 
 @Controller('notifications/zalo')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles(Role.OWNER)
+@Roles(Role.STAFF, Role.MANAGER, Role.OWNER)
 export class ZaloController {
   constructor(private readonly connection: ZaloConnectionService, private readonly provider: ZcaNotificationProvider) {}
 

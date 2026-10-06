@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Alert, DatePicker, Input, Select, Spin, Table } from "antd";
+import { Alert, DatePicker, Input, Spin, Table } from "antd";
 import type { Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -116,17 +116,22 @@ export function OrdersPage() {
         )}
         {management && (
           <>
-            <Select
-              size="large"
-              allowClear
-              placeholder="Trạng thái"
-              options={statusOptions}
-              value={status}
-              onChange={(value) => {
-                setStatus(value);
+            <select
+              className="service-select"
+              aria-label="Trạng thái"
+              value={status ?? ""}
+              onChange={(event) => {
+                setStatus((event.target.value || undefined) as OrderStatus | undefined);
                 setPage(1);
               }}
-            />
+            >
+              <option value="">Trạng thái</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <DatePicker.RangePicker
               size="large"
               format="DD/MM/YYYY"

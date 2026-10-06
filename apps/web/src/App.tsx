@@ -24,14 +24,13 @@ const staffMobileItems = [
   { key: "/scan", icon: <ScanOutlined />, text: "Quét QR" },
   { key: "/orders", icon: <OrderedListOutlined />, text: "Đơn hàng" },
   { key: "/customers", icon: <TeamOutlined />, text: "Khách hàng" },
-  // { key: "/profile", icon: <UserOutlined />, text: "Tài khoản" },
+  { key: "/settings", icon: <SettingOutlined />, text: "Kết nối Zalo" },
 ];
 const managementMobileItems = [
   { key: "/dashboard", icon: <DashboardOutlined />, text: "Tổng quan" },
   { key: "/orders", icon: <OrderedListOutlined />, text: "Đơn hàng" },
   { key: "/customers", icon: <TeamOutlined />, text: "Khách hàng" },
   { key: "/expenses", icon: <DollarOutlined />, text: "Chi phí" },
-  // { key: "/profile", icon: <UserOutlined />, text: "Tài khoản" },
 ];
 
 function mobileItemsFor(role?: string) {
@@ -78,7 +77,7 @@ const staffDesktop = [
   { key: "/scan", icon: <ScanOutlined />, text: "Quét QR" },
   { key: "/orders", icon: <OrderedListOutlined />, text: "Đơn hàng" },
   { key: "/customers", icon: <TeamOutlined />, text: "Khách hàng" },
-  // { key: '/profile', icon: <UserOutlined/>, text: 'Tài khoản' },
+  { key: "/settings", icon: <SettingOutlined />, text: "Kết nối Zalo" },
 ];
 
 const roleLabels: Record<string, string> = {

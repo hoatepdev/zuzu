@@ -107,12 +107,10 @@ export const router = createBrowserRouter([
                   { path: "services", element: lazyPage(<ServicesPage />) },
                 ],
               },
+              { path: "settings", element: lazyPage(<SettingsPage />) },
               {
                 element: <RequireOwner />,
-                children: [
-                  { path: "users", element: lazyPage(<UsersPage />) },
-                  { path: "settings", element: lazyPage(<SettingsPage />) },
-                ],
+                children: [{ path: "users", element: lazyPage(<UsersPage />) }],
               },
             ],
           },

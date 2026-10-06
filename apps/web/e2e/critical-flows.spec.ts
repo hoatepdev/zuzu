@@ -3,10 +3,14 @@ import { expect, test } from "@playwright/test";
 const username = process.env.E2E_USERNAME ?? "staff";
 const password = process.env.E2E_PASSWORD ?? "zuzu123";
 
-async function login(page: import("@playwright/test").Page) {
+async function login(
+  page: import("@playwright/test").Page,
+  loginUsername = username,
+  loginPassword = password,
+) {
   await page.goto("/login");
-  await page.getByLabel(/tài khoản|số điện thoại/i).fill(username);
-  await page.getByLabel(/mật khẩu/i).fill(password);
+  await page.getByLabel(/tài khoản|số điện thoại/i).fill(loginUsername);
+  await page.getByLabel(/mật khẩu/i).fill(loginPassword);
   await page.getByRole("button", { name: /đăng nhập/i }).click();
 }
 
@@ -44,4 +48,16 @@ test("order completion route is reachable from application", async ({ page }) =>
   await login(page);
   await page.goto("/orders");
   await expect(page).toHaveURL(/orders|staff/);
+});
+
+test("manager can select an order status", async ({ page }) => {
+  await login(page, "manager", "zuzu123");
+  await page.goto("/orders");
+
+  const status = page.getByRole("combobox", { name: "Trạng thái" });
+  await expect(status.getByRole("option", { name: "Đang xử lý" })).toHaveCount(1);
+  await status.selectOption("PROCESSING");
+  await expect(status).toHaveValue("PROCESSING");
+  await status.selectOption("");
+  await expect(status).toHaveValue("");
 });

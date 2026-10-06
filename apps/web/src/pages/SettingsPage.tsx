@@ -14,16 +14,19 @@ import { useEffect } from "react";
 import { api } from "../api/client";
 import type { ZaloConnection } from "../api/types";
 import { PageHeader } from "../components/common";
+import { useSession } from "../session";
 
 const pollingStatuses = new Set(["WAITING_QR", "SCANNED"]);
 
 export function SettingsPage() {
   const { message } = AntApp.useApp();
+  const session = useSession();
   const qc = useQueryClient();
   const [form] = Form.useForm();
   const query = useQuery({
     queryKey: ["settings", "loyalty"],
     queryFn: () => api<{ vndPerPoint: number }>("/settings/loyalty"),
+    enabled: session.data?.role === "OWNER",
   });
   const zalo = useQuery({
     queryKey: ["notifications", "zalo"],
@@ -70,7 +73,7 @@ export function SettingsPage() {
   const status = zalo.data?.status;
   return (
     <>
-      <PageHeader sub="Cấu hình chung của cửa hàng">Cài đặt</PageHeader>
+      <PageHeader sub="Kết nối và thông báo">{session.data?.role === "OWNER" ? "Cài đặt" : "Kết nối Zalo"}</PageHeader>
       {query.error && (
         <Alert
           className="customer-match"
@@ -79,16 +82,17 @@ export function SettingsPage() {
           showIcon
         />
       )}
-      <div className="panel">
-        <h2 className="panel-title">Điểm thưởng</h2>
-        {save.error && (
-          <Alert
-            className="customer-match"
-            type="error"
-            message={save.error.message}
-            showIcon
-          />
-        )}
+      {session.data?.role === "OWNER" && (
+        <div className="panel">
+          <h2 className="panel-title">Điểm thưởng</h2>
+          {save.error && (
+            <Alert
+              className="customer-match"
+              type="error"
+              message={save.error.message}
+              showIcon
+            />
+          )}
         <Form
           form={form}
           layout="vertical"
@@ -110,8 +114,9 @@ export function SettingsPage() {
           <Button type="primary" htmlType="submit" loading={save.isPending}>
             LƯU
           </Button>
-        </Form>
-      </div>
+          </Form>
+        </div>
+      )}
       <div className="panel zalo-settings">
         <h2 className="panel-title">Kết nối Zalo</h2>
         {zalo.error && (

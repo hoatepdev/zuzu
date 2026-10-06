@@ -8,3 +8,9 @@ it('denies roles not allowed by backend metadata', () => {
   const context = { switchToHttp: () => ({ getRequest: () => ({ user: { role: Role.STAFF } }) }), getHandler: () => null, getClass: () => null } as unknown as ExecutionContext;
   expect(() => new RolesGuard(reflector).canActivate(context)).toThrow(ForbiddenException);
 });
+
+it('allows staff for shared Zalo connection metadata', () => {
+  const reflector = { getAllAndOverride: () => [Role.STAFF, Role.MANAGER, Role.OWNER] } as unknown as Reflector;
+  const context = { switchToHttp: () => ({ getRequest: () => ({ user: { role: Role.STAFF } }) }), getHandler: () => null, getClass: () => null } as unknown as ExecutionContext;
+  expect(new RolesGuard(reflector).canActivate(context)).toBe(true);
+});

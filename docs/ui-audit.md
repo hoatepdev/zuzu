@@ -100,6 +100,7 @@ Backend tự:
 - STAFF được tạo chi phí, nhận/trả đồ, cân hoàn thành, gắn khách, xem đơn và khách.
 - MANAGER/OWNER quản lý dashboard, chi phí, audit, ca và bảng giá.
 - OWNER quản lý nhân viên và loyalty setting.
+- OWNER có toàn quyền vận hành và quản lý trong giai đoạn một người vận hành; các giới hạn STAFF/MANAGER giữ nguyên để dùng lại khi mở rộng nhân sự.
 - Huỷ đơn chỉ MANAGER/OWNER.
 
 ## 5. Những điểm đang làm đúng

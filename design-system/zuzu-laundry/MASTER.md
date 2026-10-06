@@ -367,7 +367,7 @@ Không tạo:
 2. Quantity/kg numeric centerpiece + autofocus.
 3. Live estimated total.
 4. Sticky `HOÀN THÀNH`.
-5. Discount manager-only under progressive disclosure.
+5. Discount manager/owner-only under progressive disclosure.
 
 ### Return
 
