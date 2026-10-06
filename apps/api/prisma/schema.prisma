@@ -196,6 +196,7 @@ model Notification {
   id        String             @id @default(cuid())
   orderId   String
   order     Order              @relation(fields: [orderId], references: [id])
+  type      String             @default("ORDER_READY")
   channel   String
   status    NotificationStatus
   message   String
@@ -203,6 +204,15 @@ model Notification {
   createdAt DateTime           @default(now())
 
   @@index([status])
+  @@index([orderId, channel, type, status])
+}
+
+model IntegrationCredential {
+  id            String   @id @default(cuid())
+  provider      String   @unique
+  encryptedData String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model PrintJob {

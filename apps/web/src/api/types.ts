@@ -6,6 +6,8 @@ export type OrderStatus =
   | "CANCELLED";
 export type User = { id: string; username: string; name: string; phone?: string; role: Role };
 export type UserAccount = { id: string; username: string; phone?: string; name: string; role: Role; active: boolean; createdAt: string };
+export type ZaloStatus = 'DISCONNECTED' | 'WAITING_QR' | 'SCANNED' | 'CONNECTED' | 'EXPIRED' | 'ERROR';
+export type ZaloConnection = { status: ZaloStatus; qrImage?: string; account?: { uid?: string; displayName: string; avatar?: string }; error?: string };
 export type Customer = {
   id: string;
   phone: string;

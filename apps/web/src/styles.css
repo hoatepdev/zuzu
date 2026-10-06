@@ -1999,6 +1999,14 @@ h3 {
   font-size: 16px;
   font-weight: 700;
 }
+.zalo-settings { max-width: 680px; }
+.zalo-account { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.zalo-qr { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.zalo-qr img { width: min(100%, 280px); aspect-ratio: 1; border-radius: 12px; image-rendering: auto; }
+@media (max-width: 600px) {
+  .zalo-settings .ant-form-inline { display: grid; gap: 8px; }
+  .zalo-settings .ant-form-item { margin-right: 0; }
+}
 
 /* profile */
 .profile-wrap {

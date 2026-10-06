@@ -6,7 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   try { process.loadEnvFile(); } catch {}
   if (process.env.NODE_ENV === 'production') {
-    const missing = ['DATABASE_URL', 'SESSION_SECRET', 'CORS_ORIGIN', 'WEB_URL', 'PRINT_AGENT_TOKEN'].filter((name) => !process.env[name]);
+    const required = ['DATABASE_URL', 'SESSION_SECRET', 'CORS_ORIGIN', 'WEB_URL', 'PRINT_AGENT_TOKEN', 'ZALO_PROVIDER'];
+    if (process.env.ZALO_PROVIDER === 'zca') required.push('ZALO_CREDENTIALS_KEY');
+    const missing = required.filter((name) => !process.env[name]);
     if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(', ')}`);
   }
 

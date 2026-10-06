@@ -4,8 +4,8 @@ export const contactInfo = {
   zaloHref: "https://zalo.me/0916697533",
   mapsHref:
     "https://www.google.com/maps/search/?api=1&query=Gi%E1%BA%B7t+l%C3%A0+ZUZU+H%C3%A0+N%E1%BB%99i",
-  address: "Địa chỉ cửa hàng đang được cập nhật",
-  hours: "Giờ mở cửa đang được cập nhật",
+  address: "66 đường ven hồ Hạ Đình",
+  hours: "Mở cửa từ 06:00 đến 22:00 hàng ngày",
 } as const;
 
 export const services = [
@@ -41,6 +41,7 @@ export const prices = [
   { name: "Giặt phân loại", price: "từ 17.000đ/kg" },
   { name: "Chăn thường", price: "từ 20.000đ/kg" },
   { name: "Chăn đặc biệt", price: "từ 25.000đ/kg" },
+  { name: "Giặt khô", price: "60.000–80.000đ" },
   { name: "Giặt giày", price: "từ 50.000đ/đôi" },
   { name: "Topper", price: "từ 100.000đ/cái" },
 ] as const;

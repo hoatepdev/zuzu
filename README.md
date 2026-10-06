@@ -36,9 +36,17 @@ API lưu `PrintJob` cùng transaction tạo đơn. [Print Agent](apps/print-agen
 
 Triển khai, migration, backup và checklist production: [docs/production.md](docs/production.md).
 
+## Zalo notifications
+
+1. Owner mở **Cài đặt** → **Kết nối Zalo**.
+2. Chọn **Kết nối Zalo**, quét QR và xác nhận trên điện thoại.
+3. Khi trạng thái là **Đã kết nối**, ZUZU tự gửi thông báo Zalo khi đơn sẵn sàng nhận.
+
+ZUZU dùng `zca-js`, một unofficial API cho tài khoản Zalo cá nhân. Zalo có thể vô hiệu hoá session; khi đó Owner cần quét QR lại. Cookie và thông tin đăng nhập chỉ được lưu mã hoá trên server.
+
 ## Assumptions Phase 1
 
-- Zalo dùng `MockNotificationProvider`; provider thật sẽ thay qua DI mà không đổi order flow.
+- Mặc định local dùng `MockNotificationProvider`; đặt `ZALO_PROVIDER=zca` để gửi Zalo thật.
 - Không có trạng thái washing/drying/folding; bill giấy quản lý luồng vật lý.
 - Receipt hiện lưu URL, chưa upload file trực tiếp.
 - Không hỗ trợ refund/void payment đã thu, sửa đơn đã COMPLETED hoặc restatement ca đã chốt.

@@ -5,24 +5,25 @@
 body {
   padding: 0;
   margin: 0;
+  background: #fff;
 }
 .landing-page {
-  --brand-navy: #1d2d55;
-  --brand-navy-deep: #16223f;
-  --brand-navy-soft: #eef1f8;
-  --brand-pink: #d63384;
-  --brand-pink-deep: #b02a6f;
-  --brand-pink-soft: #fbe8f1;
-  --heading: #1d2d55;
-  --accent-text: #b02a6f;
+  --brand-navy: #273142;
+  --brand-navy-deep: #111827;
+  --brand-navy-soft: #f5f7fa;
+  --brand-pink: #b43f6a;
+  --brand-pink-deep: #963256;
+  --brand-pink-soft: #fff1f5;
+  --heading: #101828;
+  --accent-text: #b43f6a;
 
   --surface: #ffffff;
-  --surface-soft: #f8f7fb;
+  --surface-soft: #fafafa;
 
-  --text-primary: #1c2434;
-  --text-secondary: #4d5670;
+  --text-primary: #1d2939;
+  --text-secondary: #667085;
 
-  --border: #e5e3ee;
+  --border: #eaecf0;
 
   --landing-radius: 20px;
   --landing-radius-sm: 14px;
@@ -154,13 +155,7 @@ body {
 .landing-button-quiet:hover,
 .landing-button-quiet:focus-visible {
   background: var(--brand-navy);
-  border-color: var(--brand-navy);
   color: #fff;
-}
-
-.landing-page a:focus-visible {
-  outline: 2px solid var(--brand-pink);
-  outline-offset: 2px;
 }
 
 /* ---------- header ---------- */
@@ -291,7 +286,8 @@ body {
   place-items: center;
   padding: 26px 18px;
   border-radius: var(--landing-radius);
-  background: var(--brand-navy-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -376,19 +372,20 @@ body {
 }
 
 .laundry-service-main {
-  background: var(--brand-navy);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .laundry-service-main h3 {
-  color: #fff;
+  color: var(--heading);
 }
 
 .landing-service-composition article.laundry-service-main > span {
-  color: #f5b8d6;
+  color: var(--accent-text);
 }
 
 .laundry-service-main p {
-  color: #ccd4ea;
+  color: var(--text-secondary);
 }
 
 .laundry-service-soft {
@@ -530,7 +527,7 @@ body {
   height: 52px;
   border-radius: 50%;
   background: var(--brand-navy);
-  color: #fff;
+  color: var(--surface);
   font-size: 15px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -554,9 +551,10 @@ body {
 /* ---------- trust + gallery ---------- */
 
 .landing-trust {
-  background: var(--brand-navy);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
   border-radius: var(--landing-radius);
-  color: #e7ebf6;
+  color: var(--text-primary);
 }
 
 .landing-trust-copy {
@@ -568,7 +566,7 @@ body {
 .landing-trust-copy h2 {
   font-size: clamp(26px, 5.5vw, 34px);
   font-weight: 800;
-  color: #fff;
+  color: var(--heading);
   max-width: 440px;
 }
 
@@ -594,8 +592,8 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(214, 51, 132, 0.28);
-  color: #f5b8d6;
+  background: var(--brand-pink-soft);
+  color: var(--accent-text);
   font-size: 13px;
 }
 
@@ -603,7 +601,7 @@ body {
   margin-bottom: 16px;
   font-size: 20px;
   font-weight: 750;
-  color: #fff;
+  color: var(--heading);
 }
 
 .landing-gallery-grid {
@@ -616,8 +614,8 @@ body {
   place-items: center;
   min-height: 150px;
   border-radius: var(--landing-radius-sm);
-  border: 1.5px dashed rgba(231, 235, 246, 0.35);
-  color: rgba(231, 235, 246, 0.75);
+  border: 1.5px dashed var(--border);
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 600;
 }
@@ -722,6 +720,9 @@ body {
 }
 
 .landing-phone {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-top: 6px;
   font-size: 17px;
   font-weight: 700;
@@ -922,6 +923,11 @@ body {
     align-items: center;
   }
 
+  .landing-footer-wordmark {
+    display: flex;
+    gap: 1rem;
+  }
+
   .landing-footer nav {
     display: flex;
     gap: 22px;
@@ -968,49 +974,14 @@ body {
   }
 }
 
-/* ---------- dark mode ---------- */
+/* ---------- always-light palette ---------- */
 
-@media (prefers-color-scheme: dark) {
-  .landing-page {
-    --brand-navy-soft: #232f4e;
-    --brand-pink-soft: #3a1f30;
+.landing-page,
+.landing-header,
+.landing-mobile-actions {
+  color-scheme: light;
+}
 
-    --surface: #171b26;
-    --surface-soft: #1d2230;
-
-    --text-primary: #eef0f6;
-    --text-secondary: #a8aec2;
-
-    --border: #2c3245;
-
-    --heading: #ffffff;
-    --accent-text: #ef6fa7;
-  }
-
-  /* scoped: chỉ khi landing đang mount, để không tô nền tối cho app quản trị */
-  html:has(.landing-page) {
-    background: #171b26;
-    color-scheme: dark;
-  }
-
-  .landing-kicker {
-    color: var(--accent-text);
-  }
-
-  .landing-header {
-    background: rgba(23, 27, 38, 0.92);
-  }
-
-  .landing-button-quiet,
-  .landing-reviews > a {
-    background: var(--surface);
-  }
-
-  .landing-mobile-actions {
-    background: rgba(23, 27, 38, 0.94);
-  }
-
-  .landing-price-board {
-    background: var(--surface-soft);
-  }
+.landing-page {
+  background: var(--surface);
 }

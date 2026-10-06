@@ -14,8 +14,13 @@ import {
 
 export function ContactActions({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`landing-actions ${compact ? "landing-actions-compact" : ""}`}>
-      <a className="landing-button landing-button-primary" href={contactInfo.phoneHref}>
+    <div
+      className={`landing-actions ${compact ? "landing-actions-compact" : ""}`}
+    >
+      <a
+        className="landing-button landing-button-primary"
+        href={contactInfo.phoneHref}
+      >
         <PhoneOutlined aria-hidden="true" />
         Gọi cho ZUZU
       </a>
@@ -63,7 +68,11 @@ export function Hero() {
 
 export function Services() {
   return (
-    <section className="landing-section landing-services" id="dich-vu" aria-labelledby="services-title">
+    <section
+      className="landing-section landing-services"
+      id="dich-vu"
+      aria-labelledby="services-title"
+    >
       <div className="landing-section-heading">
         <h2 id="services-title">ZUZU giặt gì?</h2>
         <p>Từ đồ mặc mỗi ngày đến những món cần chăm sóc riêng.</p>
@@ -83,7 +92,11 @@ export function Services() {
 
 export function Pricing() {
   return (
-    <section className="landing-section landing-pricing" id="bang-gia" aria-labelledby="pricing-title">
+    <section
+      className="landing-section landing-pricing"
+      id="bang-gia"
+      aria-labelledby="pricing-title"
+    >
       <div className="landing-price-intro">
         <h2 id="pricing-title">
           Giá đơn giản,
@@ -114,7 +127,11 @@ export function Pricing() {
 
 export function Process() {
   return (
-    <section className="landing-section landing-process" id="quy-trinh" aria-labelledby="process-title">
+    <section
+      className="landing-section landing-process"
+      id="quy-trinh"
+      aria-labelledby="process-title"
+    >
       <div className="landing-section-heading">
         <h2 id="process-title">Đồ của bạn đi đâu sau khi gửi ZUZU?</h2>
       </div>
@@ -133,7 +150,10 @@ export function Process() {
 
 export function TrustAndGallery() {
   return (
-    <section className="landing-section landing-trust" aria-labelledby="trust-title">
+    <section
+      className="landing-section landing-trust"
+      aria-labelledby="trust-title"
+    >
       <div className="landing-trust-copy">
         <h2 id="trust-title">Mỗi túi đồ, một hành trình rõ ràng.</h2>
         <ul>
@@ -157,10 +177,18 @@ export function TrustAndGallery() {
               loading="lazy"
             />
           </figure>
-          <div className="landing-photo-placeholder landing-photo-machines" role="img" aria-label="Vị trí ảnh khu máy giặt và máy sấy">
+          <div
+            className="landing-photo-placeholder landing-photo-machines"
+            role="img"
+            aria-label="Vị trí ảnh khu máy giặt và máy sấy"
+          >
             <span>Khu giặt sấy</span>
           </div>
-          <div className="landing-photo-placeholder landing-photo-folded" role="img" aria-label="Vị trí ảnh đồ đã được gấp gọn">
+          <div
+            className="landing-photo-placeholder landing-photo-folded"
+            role="img"
+            aria-label="Vị trí ảnh đồ đã được gấp gọn"
+          >
             <span>Đồ đã gấp</span>
           </div>
         </div>
@@ -171,10 +199,16 @@ export function TrustAndGallery() {
 
 export function Reviews() {
   return (
-    <section className="landing-section landing-reviews" aria-labelledby="reviews-title">
+    <section
+      className="landing-section landing-reviews"
+      aria-labelledby="reviews-title"
+    >
       <div>
         <h2 id="reviews-title">Khách nói gì về ZUZU</h2>
-        <p>ZUZU không đăng lời khen chưa được xác thực. Xem thông tin cửa hàng trực tiếp trên Google Maps.</p>
+        <p>
+          ZUZU không đăng lời khen chưa được xác thực. Xem thông tin cửa hàng
+          trực tiếp trên Google Maps.
+        </p>
       </div>
       <a href={contactInfo.mapsHref} target="_blank" rel="noreferrer">
         Xem ZUZU trên Google Maps
@@ -186,10 +220,14 @@ export function Reviews() {
 
 export function Location() {
   return (
-    <section className="landing-section landing-location" id="cua-hang" aria-labelledby="location-title">
+    <section
+      className="landing-section landing-location"
+      id="cua-hang"
+      aria-labelledby="location-title"
+    >
       <div className="landing-location-title">
         <h2 id="location-title">Ghé ZUZU nhé.</h2>
-        <p>Mang đồ tới cửa hàng hoặc liên hệ trước để hỏi về giao nhận.</p>
+        {/* <p>Mang đồ tới cửa hàng hoặc liên hệ trước để hỏi về giao nhận.</p> */}
       </div>
       <div className="landing-location-details">
         <strong>Giặt là ZUZU</strong>
@@ -200,15 +238,28 @@ export function Location() {
         </a>
       </div>
       <div className="landing-location-actions">
-        <a className="landing-button landing-button-primary" href={contactInfo.mapsHref} target="_blank" rel="noreferrer">
+        <a
+          className="landing-button landing-button-primary"
+          href={contactInfo.mapsHref}
+          target="_blank"
+          rel="noreferrer"
+        >
           <EnvironmentOutlined aria-hidden="true" />
           Chỉ đường
         </a>
-        <a className="landing-button landing-button-quiet" href={contactInfo.phoneHref}>
+        <a
+          className="landing-button landing-button-quiet"
+          href={contactInfo.phoneHref}
+        >
           <PhoneOutlined aria-hidden="true" />
           Gọi ngay
         </a>
-        <a className="landing-button landing-button-quiet" href={contactInfo.zaloHref} target="_blank" rel="noreferrer">
+        <a
+          className="landing-button landing-button-quiet"
+          href={contactInfo.zaloHref}
+          target="_blank"
+          rel="noreferrer"
+        >
           <SendOutlined aria-hidden="true" />
           Nhắn Zalo
         </a>

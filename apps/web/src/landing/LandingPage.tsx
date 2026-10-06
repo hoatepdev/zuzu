@@ -35,6 +35,7 @@ export function LandingPage() {
             <a href="#bang-gia">Bảng giá</a>
             <a href="#quy-trinh">Quy trình</a>
             <a href="#cua-hang">Cửa hàng</a>
+            <a href="/login">Nhân viên</a>
           </nav>
           <a className="landing-header-cta" href={contactInfo.phoneHref}>
             Liên hệ
@@ -56,15 +57,15 @@ export function LandingPage() {
 
       <footer className="landing-footer">
         <div className="landing-container landing-footer-inner">
-          <div>
+          <div className="landing-footer-wordmark">
             <Wordmark />
             <p>Sạch thơm. Gọn gàng. Dễ dàng.</p>
           </div>
           <nav aria-label="Điều hướng cuối trang">
-            <a href="#dich-vu">Dịch vụ</a>
+            {/* <a href="#dich-vu">Dịch vụ</a>
             <a href="#bang-gia">Bảng giá</a>
             <a href="#cua-hang">Cửa hàng</a>
-            <a href={contactInfo.phoneHref}>Liên hệ</a>
+            <a href={contactInfo.phoneHref}>Liên hệ</a> */}
           </nav>
           <small>© {new Date().getFullYear()} ZUZU</small>
         </div>
