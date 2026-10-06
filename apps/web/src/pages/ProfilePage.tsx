@@ -4,7 +4,6 @@ import {
   Button,
   Form,
   Input,
-  Popconfirm,
 } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -48,7 +47,7 @@ export function ProfilePage() {
   const me = session.data;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const [editing, setEditing] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [profileForm] = Form.useForm<ProfileValues>();
@@ -100,6 +99,16 @@ export function ProfilePage() {
     setChangingPassword(false);
     profileForm.setFieldsValue({ name: me?.name, phone: me?.phone });
     setEditing(true);
+  };
+
+  const confirmLogout = () => {
+    modal.confirm({
+      title: "Bạn muốn đăng xuất khỏi ZUZU?",
+      okText: "Đăng xuất",
+      cancelText: "Huỷ",
+      okButtonProps: { danger: true },
+      onOk: () => logout.mutateAsync(),
+    });
   };
 
   return (
@@ -249,17 +258,15 @@ export function ProfilePage() {
         </div>
 
         <div className="panel">
-          <Popconfirm
-            title="Bạn muốn đăng xuất khỏi ZUZU?"
-            onConfirm={() => logout.mutate()}
-            okText="Đăng xuất"
-            cancelText="Huỷ"
-            okButtonProps={{ danger: true }}
+          <Button
+            danger
+            block
+            size="large"
+            loading={logout.isPending}
+            onClick={confirmLogout}
           >
-            <Button danger block size="large" loading={logout.isPending}>
-              ĐĂNG XUẤT
-            </Button>
-          </Popconfirm>
+            ĐĂNG XUẤT
+          </Button>
         </div>
       </div>
     </>

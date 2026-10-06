@@ -1,9 +1,10 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, MaxLength, MinLength } from 'class-validator';
 
 export class PrintJobClaimDto {
-  @IsString() @MinLength(1) @MaxLength(100) claimToken!: string;
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(100) claimToken!: string;
 }
 
 export class PrintJobFailureDto extends PrintJobClaimDto {
-  @IsString() @MinLength(1) @MaxLength(500) error!: string;
+  @ApiProperty() @IsString() @MinLength(1) @MaxLength(500) error!: string;
 }

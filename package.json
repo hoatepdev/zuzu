@@ -11,10 +11,12 @@
     "test": "npm run test --workspace @zuzu/api && npm run test --workspace @zuzu/print-agent",
     "db:migrate": "npm run db:migrate --workspace @zuzu/api",
     "db:migrate:deploy": "npm run db:migrate:deploy --workspace @zuzu/api",
-    "db:seed": "npm run db:seed --workspace @zuzu/api"
+    "db:seed": "npm run db:seed --workspace @zuzu/api",
+    "test:web": "npm run test --workspace @zuzu/web",
+    "test:e2e": "npm run test:e2e --workspace @zuzu/web",
+    "api:generate": "npm run api:generate --workspace @zuzu/web"
   },
   "engines": {
     "node": ">=22"
-  },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  }
 }

@@ -21,6 +21,10 @@ export function quickAmount(value: number): number {
   return value < 1000 ? value * 1000 : value;
 }
 
+export function formatMoney(value: string | number): string {
+  return `${Number(value).toLocaleString("vi-VN")}đ`;
+}
+
 // Nhập <1000 hiểu là nghìn đồng; chỉ chuyển khi blur/Enter để không gián đoạn lúc gõ
 export function AmountInput({ value, onChange, ...props }: InputNumberProps) {
   const commit = () => {
@@ -62,7 +66,7 @@ export function Money({
 }) {
   return (
     <span className={`money ${className}`.trim()}>
-      {value == null ? "-" : `${Number(value).toLocaleString("vi-VN")}đ`}
+      {value == null ? "-" : formatMoney(value)}
     </span>
   );
 }

@@ -1,6 +1,7 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsPhoneNumber } from 'class-validator';
 
 export class TestZaloDto {
-  @IsPhoneNumber('VN')
+  @ApiProperty() @IsPhoneNumber('VN')
   phone!: string;
 }

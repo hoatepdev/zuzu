@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword } from '../password';
 import { AuthGuard } from './auth.guard';
 import { ChangePasswordDto, LoginDto, UpdateProfileDto } from './auth.dto';
 import { CurrentUser, SessionUser } from '../common/auth.types';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -21,6 +22,7 @@ export class AuthController {
   constructor(private readonly prisma: PrismaService, private readonly jwt: JwtService) {}
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const user = await this.prisma.user.findFirst({ where: { active: true, OR: [{ username: dto.usernameOrPhone }, { phone: dto.usernameOrPhone }] } });
     if (!user || !(await verifyPassword(dto.password, user.passwordHash))) throw new UnauthorizedException('Tài khoản hoặc mật khẩu không đúng');

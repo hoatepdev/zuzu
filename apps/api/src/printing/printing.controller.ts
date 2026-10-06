@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { PrintAgentGuard } from './print-agent.guard';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrintJobClaimDto, PrintJobFailureDto } from './printing.dto';
 import { PrintingService } from './printing.service';
 
 @Controller('print-jobs')
+@SkipThrottle()
 @UseGuards(PrintAgentGuard)
 export class PrintingController {
   constructor(private readonly printing: PrintingService) {}
