@@ -33,6 +33,15 @@ test('bill contains title, code, masked phone, VN date, QR and cut', () => {
   const { text, data } = buildReceipt(bill);
   const hex = data.toString('hex');
   assert.ok(text.includes('GIẶT LÀ ZUZU'));
+  assert.ok(text.includes('MÃ ĐƠN'));
+  assert.ok(text.includes('THÔNG TIN KHÁCH'));
+  assert.ok(text.includes('Dịch vụ dự kiến:'));
+  assert.ok(text.includes('QUÉT ĐỂ TRA ĐƠN'));
+  assert.ok(text.includes('CHECKLIST GIẶT'));
+  assert.ok(text.includes('[ ] Giặt, xả'));
+  assert.ok(text.includes('[ ] Ủ thơm'));
+  assert.ok(text.includes('[ ] Sấy, gấp'));
+  assert.ok(text.includes('CẢM ƠN QUÝ KHÁCH'));
   assert.ok(text.includes('ZU-0125'));
   assert.ok(text.includes('098****321'));
   assert.ok(!text.includes('0987654321'), 'must not print full phone');
@@ -44,8 +53,8 @@ test('bill contains title, code, masked phone, VN date, QR and cut', () => {
   assert.ok(text.includes('Giao đến:'));
   assert.ok(text.includes('12 Nguyễn Huệ'));
   assert.ok(text.includes('Dịch vụ dự kiến:'));
-  assert.ok(text.includes('□ Giặt hấp'));
-  assert.ok(text.includes('□ Sấy khô'));
+  assert.ok(text.includes('[ ] Giặt hấp'));
+  assert.ok(text.includes('[ ] Sấy khô'));
   assert.ok(text.includes('ZUZU'));
   assert.ok(text.includes('0876 833 068'));
   assert.ok(hex.includes('1d286b'), 'printer-native QR command');

@@ -1791,6 +1791,212 @@ h3 {
   height: 230px;
 }
 
+/* ---------- order detail redesign ---------- */
+.order-page {
+  max-width: 860px;
+  margin: 0 auto;
+}
+.order-page .page-alert {
+  margin-bottom: 12px;
+}
+.order-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border-color: var(--line);
+  box-shadow: var(--shadow-1);
+}
+.order-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--brand);
+}
+.eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.oh-title {
+  gap: 12px;
+}
+.order-back-link {
+  width: 44px;
+  height: 44px;
+}
+.oh-code {
+  font-size: clamp(28px, 7vw, 38px);
+  letter-spacing: -0.02em;
+}
+.oh-customer {
+  align-items: end;
+  margin-top: 24px;
+  padding: 18px 0 20px;
+}
+.oh-customer strong {
+  font-size: 21px;
+}
+.oh-customer a {
+  align-self: end;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--brand-deep);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.oh-customer a:hover {
+  text-decoration: underline;
+}
+.oh-unknown {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-top: 18px;
+}
+.oh-unknown small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.unknown-badge {
+  border-radius: var(--radius-xs);
+}
+.note-callout {
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-xs);
+}
+.order-metrics {
+  gap: 0;
+  margin-top: 22px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+.order-metric {
+  grid-template-rows: auto auto;
+  gap: 5px;
+}
+.order-metric span {
+  font-size: 11px;
+}
+.order-metric strong,
+.order-metric .money-hero {
+  font-size: 22px;
+  line-height: 30px;
+}
+.order-metric .money-hero {
+  color: var(--brand-ink);
+}
+.detail-list {
+  padding: 0 22px;
+  box-shadow: var(--shadow-1);
+}
+.detail-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  padding: 20px 0 6px;
+}
+.detail-section-heading h2,
+.return-summary h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.detail-section-heading .eyebrow,
+.return-summary .eyebrow {
+  margin-bottom: 5px;
+}
+.detail-section-heading-services {
+  margin-top: 6px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-soft);
+}
+.detail-row {
+  padding: 14px 0;
+}
+.detail-row span:first-child {
+  font-size: 14px;
+}
+.detail-row strong {
+  font-size: 14px;
+}
+.order-item-lines {
+  border: 1px solid var(--line-soft);
+  background: var(--surface-warm);
+}
+.order-item-line {
+  padding: 12px 14px;
+}
+.order-item-line span {
+  font-size: 14.5px;
+}
+.payment-panel {
+  gap: 14px;
+  margin-top: 16px;
+  padding: 20px;
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  box-shadow: var(--shadow-1);
+}
+.return-summary {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.return-summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.return-amount {
+  flex: none;
+  color: var(--brand-ink);
+  font-size: 26px;
+  line-height: 1.1;
+}
+.return-points {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-xs);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 14px;
+}
+.return-points strong {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.payment-choice button {
+  min-height: 62px;
+  border-radius: var(--radius-xs);
+}
+.payment-choice button[aria-pressed="true"] {
+  border-width: 2px;
+}
+.order-actions {
+  margin: 16px 0;
+}
+.order-actions button {
+  min-height: 52px;
+}
+
 /* ---------- dashboard / management ---------- */
 
 .filter-bar {

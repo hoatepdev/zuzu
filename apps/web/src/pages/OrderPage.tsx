@@ -126,7 +126,7 @@ export function OrderPage() {
     data.status === "PROCESSING" || needsCustomer || canReturn;
 
   return (
-    <div className="has-bottom-action">
+    <div className="order-page has-bottom-action">
       {data.printJobs[0]?.status === "FAILED" && (
         <Banner
           className="page-alert"
@@ -172,7 +172,10 @@ export function OrderPage() {
             >
               <ArrowLeft aria-hidden="true" />
             </Link>
-            <h1 className="oh-code">{data.code}</h1>
+            <div>
+              <span className="eyebrow">Chi tiết đơn hàng</span>
+              <h1 className="oh-code">{data.code}</h1>
+            </div>
           </div>
           <StatusBadge status={data.status} />
         </div>
@@ -180,11 +183,12 @@ export function OrderPage() {
           <div className="oh-customer">
             <span>Khách hàng</span>
             <strong>{data.customer.name ?? "Khách hàng"}</strong>
-            <small>{data.customer.phone}</small>
+            <a href={`tel:${data.customer.phone}`}>{data.customer.phone}</a>
           </div>
         ) : (
           <div className="oh-unknown">
             <span className="unknown-badge">Chưa xác định khách</span>
+            <small>Có thể gắn khách trước khi trả đồ</small>
           </div>
         )}
         {data.note && (
@@ -196,11 +200,11 @@ export function OrderPage() {
         <div className="order-metrics">
           <div className="order-metric">
             <span>Khối lượng</span>
-            <span>
+            <strong>
               {data.weight && Number(data.weight) > 0
                 ? `${data.weight} kg`
-                : "—"}
-            </span>
+                : "Chưa cân"}
+            </strong>
           </div>
           <div className="order-metric amount">
             <span>{canReturn ? "Cần thanh toán" : "Thành tiền"}</span>
@@ -209,7 +213,13 @@ export function OrderPage() {
         </div>
       </section>
 
-      <section className="detail-list" aria-label="Thông tin đơn">
+      <section className="detail-list" aria-labelledby="order-timeline-title">
+        <div className="detail-section-heading">
+          <div>
+            <span className="eyebrow">Theo dõi</span>
+            <h2 id="order-timeline-title">Thời gian &amp; giao nhận</h2>
+          </div>
+        </div>
         <div className="detail-row">
           <span>Nhận lúc</span>
           <strong>{new Date(data.createdAt).toLocaleString("vi-VN")}</strong>
@@ -248,6 +258,12 @@ export function OrderPage() {
             <strong>{data.deliveryAddress}</strong>
           </div>
         )}
+        <div className="detail-section-heading detail-section-heading-services">
+          <div>
+            <span className="eyebrow">Chi tiết tính tiền</span>
+            <h2>Dịch vụ đã nhận</h2>
+          </div>
+        </div>
         <div className="detail-row detail-row-stack">
           <span>Dịch vụ</span>
           <div className="order-item-lines">
@@ -302,12 +318,6 @@ export function OrderPage() {
             </strong>
           </div>
         )}
-        {canReturn && (
-          <div className="detail-row loyalty-row">
-            <span>Điểm sau khi trả đồ</span>
-            <strong>+{data.pointsToEarn ?? 0} điểm</strong>
-          </div>
-        )}
         {data.payments[0] && (
           <div className="detail-row">
             <span>Đã thanh toán</span>
@@ -321,10 +331,18 @@ export function OrderPage() {
       </section>
 
       {canReturn && (
-        <section className="payment-panel">
-          <div className="section-heading">
-            <strong>Chọn cách thanh toán</strong>
-            <small>Xác nhận cùng khách trước khi trả đồ</small>
+        <section className="payment-panel" aria-labelledby="payment-title">
+          <div className="return-summary">
+            <div>
+              <span className="eyebrow">Sẵn sàng trả đồ</span>
+              <h2 id="payment-title">Xác nhận thanh toán</h2>
+              <small>Chọn cách khách thanh toán trước khi trả đồ</small>
+            </div>
+            <Money className="return-amount" value={data.total} />
+          </div>
+          <div className="return-points">
+            <span>Điểm khách nhận được</span>
+            <strong>+{data.pointsToEarn ?? 0} điểm</strong>
           </div>
           <QuickChoice
             className="payment-choice"
