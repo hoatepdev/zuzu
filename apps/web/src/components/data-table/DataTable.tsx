@@ -45,7 +45,7 @@ export function DataTable<TData, TValue>({
   data,
   page = 1,
   total,
-  pageSize = 20,
+  pageSize = 10,
   loading = false,
   emptyDescription = "Chưa có dữ liệu",
   manualPagination = false,
@@ -71,11 +71,16 @@ export function DataTable<TData, TValue>({
     manualPagination,
     manualFiltering,
     manualSorting,
-    pageCount: manualPagination && total != null ? Math.ceil(total / pageSize) : undefined,
+    pageCount:
+      manualPagination && total != null
+        ? Math.ceil(total / pageSize)
+        : undefined,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: manualPagination ? undefined : getPaginationRowModel(),
+    getPaginationRowModel: manualPagination
+      ? undefined
+      : getPaginationRowModel(),
   });
 
   const rows = table.getRowModel().rows;
@@ -117,11 +122,18 @@ export function DataTable<TData, TValue>({
                       onClick={header.column.getToggleSortingHandler()}
                       disabled={!header.column.getCanSort()}
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getCanSort() && (
-                        header.column.getIsSorted() === "asc" ? <ArrowUp /> :
-                        header.column.getIsSorted() === "desc" ? <ArrowDown /> : <ChevronsUpDown />
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
                       )}
+                      {header.column.getCanSort() &&
+                        (header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown />
+                        ) : (
+                          <ChevronsUpDown />
+                        ))}
                     </Button>
                   )}
                 </TableHead>
@@ -146,7 +158,10 @@ export function DataTable<TData, TValue>({
                 tabIndex={onRowClick ? 0 : undefined}
                 onClick={() => onRowClick?.(row.original)}
                 onKeyDown={(event) => {
-                  if (onRowClick && (event.key === "Enter" || event.key === " ")) {
+                  if (
+                    onRowClick &&
+                    (event.key === "Enter" || event.key === " ")
+                  ) {
                     event.preventDefault();
                     onRowClick(row.original);
                   }
@@ -161,13 +176,20 @@ export function DataTable<TData, TValue>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length}><EmptyState description={emptyDescription} /></TableCell>
+              <TableCell colSpan={columns.length}>
+                <EmptyState description={emptyDescription} />
+              </TableCell>
             </TableRow>
           )}
         </TableBody>
       </Table>
       {manualPagination && onPageChange && total != null ? (
-        <Pager page={page} total={total} limit={pageSize} onChange={onPageChange} />
+        <Pager
+          page={page}
+          total={total}
+          limit={pageSize}
+          onChange={onPageChange}
+        />
       ) : null}
     </div>
   );

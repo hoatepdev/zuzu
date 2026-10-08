@@ -86,13 +86,14 @@ export function NumberInput({
   decimal?: boolean;
   quickThousand?: boolean;
   suffix?: string;
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "suffix" | "type">) {
+} & Omit<
+  ComponentProps<typeof Input>,
+  "value" | "onChange" | "min" | "suffix" | "type"
+>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const readValue = () => {
     const raw = inputRef.current?.value.trim();
-    return raw
-      ? Number(raw.replace(/\./g, "").replace(",", "."))
-      : undefined;
+    return raw ? Number(raw.replace(/\./g, "").replace(",", ".")) : undefined;
   };
   const commit = (next?: number) => {
     if (next != null) {
@@ -377,7 +378,10 @@ export function NumberField<T extends FieldValues>({
   label?: ReactNode;
   hint?: ReactNode;
   rules?: Rule;
-} & Omit<ComponentProps<typeof NumberInput>, "id" | "name" | "value" | "onChange" | "onBlur">) {
+} & Omit<
+  ComponentProps<typeof NumberInput>,
+  "id" | "name" | "value" | "onChange" | "onBlur"
+>) {
   return (
     <Controller
       control={control}
@@ -474,7 +478,10 @@ export function TextareaField<T extends FieldValues>({
   label?: ReactNode;
   hint?: ReactNode;
   rules?: Rule;
-} & Omit<ComponentProps<typeof Textarea>, "id" | "name" | "value" | "onChange" | "onBlur">) {
+} & Omit<
+  ComponentProps<typeof Textarea>,
+  "id" | "name" | "value" | "onChange" | "onBlur"
+>) {
   return (
     <Controller
       control={control}
@@ -559,7 +566,7 @@ export function SwitchField<T extends FieldValues>({
 export function Pager({
   page,
   total,
-  limit = 20,
+  limit = 10,
   onChange,
 }: {
   page: number;
@@ -711,7 +718,11 @@ export function TableSkeleton({
 
 export function ListSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="panel record-skeleton-list" role="status" aria-label="Đang tải dữ liệu">
+    <div
+      className="panel record-skeleton-list"
+      role="status"
+      aria-label="Đang tải dữ liệu"
+    >
       {[...Array(rows)].map((_, row) => (
         <Skeleton key={row} className="skeleton-line" />
       ))}

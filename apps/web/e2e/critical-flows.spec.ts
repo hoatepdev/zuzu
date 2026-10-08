@@ -76,6 +76,17 @@ test("manager can select an order status", async ({ page }) => {
   await expect(status).toHaveText("Tất cả");
 });
 
+test("manager can change orders page size", async ({ page }) => {
+  await login(page, "manager", "zuzu123");
+  await page.goto("/orders");
+
+  const pageSize = page.getByRole("combobox", { name: "Số đơn mỗi trang" });
+  await pageSize.click();
+  await page.getByRole("option", { name: "50 đơn" }).click();
+  await expect(pageSize).toHaveText("50 đơn");
+  await expect(page).toHaveURL(/limit=50/);
+});
+
 test("staff pages have no horizontal scroll at 375px", async ({ page }) => {
   await login(page);
   await page.setViewportSize({ width: 375, height: 812 });
@@ -102,6 +113,49 @@ test("management data switches between record list and table by viewport", async
   await page.goto("/expenses");
   await expect(page.locator(".desktop-data-table").first()).toBeVisible();
   await expect(page.locator(".mobile-data-list").first()).toBeHidden();
+});
+
+test("manager orders keep cards on tablet and table on laptop", async ({ page }) => {
+  await login(page, "manager", "zuzu123");
+
+  for (const viewport of [
+    { width: 768, height: 1024 },
+    { width: 820, height: 900 },
+    { width: 834, height: 900 },
+    { width: 1023, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 1199, height: 900 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/orders");
+    await page.waitForLoadState("networkidle");
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+
+    if (viewport.width < 1024) {
+      await expect(page.locator(".mobile-data-list")).toBeVisible();
+      await expect(page.locator(".desktop-data-table")).toBeHidden();
+      const mobilePager = page.locator(".orders-mobile-pager");
+      if (await mobilePager.locator(".pager").count()) {
+        await expect(mobilePager).toBeVisible();
+      }
+    } else {
+      await expect(page.locator(".desktop-data-table")).toBeVisible();
+      await expect(page.locator(".mobile-data-list")).toBeHidden();
+      await expect(page.locator(".management-table th")).toHaveCount(8);
+      const ordersPager = page.locator(".orders-pagination-controls .pager");
+      if (await ordersPager.count()) {
+        await expect(ordersPager).toBeVisible();
+        await expect(page.locator(".orders-mobile-pager")).toBeVisible();
+      }
+      await expect(page.locator(".desktop-data-table .pager")).toBeHidden();
+    }
+  }
 });
 
 test("keyboard focus reaches receive form controls", async ({ page }) => {
