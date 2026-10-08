@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
@@ -11,11 +10,11 @@ import {
   Money,
   PageHeader,
   QuickChoice,
-  Spinner,
 } from "../components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const vnDateKey = (date: Date) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
@@ -80,12 +79,6 @@ export function DashboardPage() {
       ),
   });
   const d = query.data;
-  const reduceMotion = useReducedMotion();
-  const enter = {
-    initial: { opacity: 0, y: reduceMotion ? 0 : 6 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.2 },
-  };
 
   const applyPreset = (next: DashboardPreset) => {
     const range = presetRange(next);
@@ -111,44 +104,46 @@ export function DashboardPage() {
       >
         {from === to ? "Hôm nay" : `${formatDMY(from)} → ${formatDMY(to)}`}
       </PageHeader>
-      <div className="range-picker" aria-label="Khoảng ngày dashboard">
-        <Label htmlFor="dashboard-from">
-          <span>Từ</span>
-          <Input
-            id="dashboard-from"
-            type="date"
-            className="date-input"
-            value={from}
-            max={to}
-            onChange={(event) => {
-              setFrom(event.target.value || today);
-              setPreset(undefined);
-            }}
-          />
-        </Label>
-        <Label htmlFor="dashboard-to">
-          <span>Đến</span>
-          <Input
-            id="dashboard-to"
-            type="date"
-            className="date-input"
-            value={to}
-            min={from}
-            max={today}
-            onChange={(event) => {
-              setTo(event.target.value || today);
-              setPreset(undefined);
-            }}
-          />
-        </Label>
+      <div className="dashboard-toolbar" aria-label="Khoảng thời gian">
+        <QuickChoice
+          className="range-presets"
+          ariaLabel="Chọn nhanh khoảng ngày"
+          options={presetOptions}
+          value={preset}
+          onChange={applyPreset}
+        />
+        <div className="range-picker">
+          <Label htmlFor="dashboard-from">
+            <span>Từ</span>
+            <Input
+              id="dashboard-from"
+              type="date"
+              className="date-input"
+              value={from}
+              max={to}
+              onChange={(event) => {
+                setFrom(event.target.value || today);
+                setPreset(undefined);
+              }}
+            />
+          </Label>
+          <Label htmlFor="dashboard-to">
+            <span>Đến</span>
+            <Input
+              id="dashboard-to"
+              type="date"
+              className="date-input"
+              value={to}
+              min={from}
+              max={today}
+              onChange={(event) => {
+                setTo(event.target.value || today);
+                setPreset(undefined);
+              }}
+            />
+          </Label>
+        </div>
       </div>
-      <QuickChoice
-        className="range-presets"
-        ariaLabel="Chọn nhanh khoảng ngày"
-        options={presetOptions}
-        value={preset}
-        onChange={applyPreset}
-      />
       {query.error && (
         <Banner
           className="list-card"
@@ -157,13 +152,22 @@ export function DashboardPage() {
         />
       )}
       {query.error ? null : query.isLoading ? (
-        <div className="center">
-          <Spinner className="size-6" />
+        <div className="dashboard-loading" role="status" aria-label="Đang tải tổng quan">
+          <div className="dashboard-metrics">
+            {[...Array(3)].map((_, index) => (
+              <div className="metric-skeleton" key={index}>
+                <Skeleton className="skeleton-line" />
+                <Skeleton className="skeleton-line" />
+              </div>
+            ))}
+          </div>
+          <div className="panel">
+            <Skeleton className="chart-skeleton" />
+          </div>
         </div>
       ) : (
         <>
-          <motion.section
-            {...enter}
+          <section
             className="dashboard-metrics list-card"
             aria-label="Tài chính"
           >
@@ -186,10 +190,9 @@ export function DashboardPage() {
             >
               <Money value={d?.estimatedProfit} />
             </Metric>
-          </motion.section>
-          <motion.section
-            {...enter}
-            className="dashboard-metrics list-card"
+          </section>
+          <section
+            className="dashboard-metrics metrics-secondary list-card"
             aria-label="Vận hành"
           >
             <Metric
@@ -201,8 +204,8 @@ export function DashboardPage() {
             <Metric label="Tổng khối lượng">{d?.kg ?? 0} kg</Metric>
             <Metric label="Đang xử lý">{d?.processing ?? 0}</Metric>
             <Metric label="Chờ khách lấy">{d?.ready ?? 0}</Metric>
-          </motion.section>
-          <motion.section {...enter} className="panel detail-list" aria-label="Chi tiết">
+          </section>
+          <section className="panel detail-list" aria-label="Chi tiết">
             <h2 className="panel-title">Dòng tiền</h2>
             <div className="detail-row">
               <span>Tiền mặt</span>
@@ -228,11 +231,11 @@ export function DashboardPage() {
                 {d?.newCustomers ?? 0} / {d?.returningCustomers ?? 0}
               </strong>
             </div>
-          </motion.section>
-          <motion.section {...enter} className="panel dashboard-chart" aria-labelledby="revenue-chart-title">
+          </section>
+          <section className="panel dashboard-chart" aria-labelledby="revenue-chart-title">
             <h2 id="revenue-chart-title" className="panel-title">Doanh thu theo ngày</h2>
             <RevenueChart data={chartData} />
-          </motion.section>
+          </section>
         </>
       )}
     </>

@@ -210,7 +210,8 @@ export function CompletePage() {
       >
         <section className="item-editor-list">
           <div className="section-heading">
-            <small>Chạm một dòng để sửa</small>
+            <strong>Dịch vụ của đơn</strong>
+            <small>Chạm một dòng để sửa số lượng hoặc giá</small>
           </div>
           {fields.map((field, index) => {
             const current = items[index] ?? {};

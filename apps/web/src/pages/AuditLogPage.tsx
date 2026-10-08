@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { AuditLog, Page } from "../api/types";
-import { Banner, PageHeader, Pager } from "../components/common";
+import { Banner, PageHeader, Pager, TableSkeleton } from "../components/common";
 import {
   Table,
   TableBody,
@@ -14,7 +14,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -136,58 +135,57 @@ export function AuditLogPage() {
         <Banner tone="error" title={query.error.message} />
       )}
       {query.isLoading ? (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Người thao tác</TableHead>
-                <TableHead>Loại</TableHead>
-                <TableHead>Hành động</TableHead>
-                <TableHead>Mã dữ liệu</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={5}>
-                    <Skeleton className="skeleton-line" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <TableSkeleton cols={5} />
       ) : (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Thời gian</TableHead>
-                <TableHead>Người thao tác</TableHead>
-                <TableHead>Loại</TableHead>
-                <TableHead>Hành động</TableHead>
-                <TableHead>Mã dữ liệu</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(query.data?.items ?? []).map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{new Date(row.createdAt).toLocaleString("vi-VN")}</TableCell>
-                  <TableCell>{row.user.name}</TableCell>
-                  <TableCell>
-                    <Badge className="status-badge st-CANCELLED">
-                      {entityLabels[row.entityType] ?? "Khác"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{actionLabels[row.action] ?? "Khác"}</TableCell>
-                  <TableCell>{row.entityId}</TableCell>
+        <>
+          <div className="desktop-data-table table-wrap">
+            <Table className="management-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Thời gian</TableHead>
+                  <TableHead>Người thao tác</TableHead>
+                  <TableHead>Loại</TableHead>
+                  <TableHead>Hành động</TableHead>
+                  <TableHead>Mã dữ liệu</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(query.data?.items ?? []).map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{new Date(row.createdAt).toLocaleString("vi-VN")}</TableCell>
+                    <TableCell>{row.user.name}</TableCell>
+                    <TableCell>
+                      <Badge className="status-badge st-CANCELLED">
+                        {entityLabels[row.entityType] ?? "Khác"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{actionLabels[row.action] ?? "Khác"}</TableCell>
+                    <TableCell>{row.entityId}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mobile-data-list record-list" aria-label="Lịch sử thao tác">
+            {(query.data?.items ?? []).map((row) => (
+              <article className="record-card" key={row.id}>
+                <div className="record-card-top">
+                  <span className="record-card-title">
+                    {actionLabels[row.action] ?? "Khác"}
+                  </span>
+                  <Badge className="status-badge st-CANCELLED">
+                    {entityLabels[row.entityType] ?? "Khác"}
+                  </Badge>
+                </div>
+                <p className="record-card-meta">
+                  {new Date(row.createdAt).toLocaleString("vi-VN")} · {row.user.name}
+                </p>
+                <p className="record-card-meta">{row.entityId}</p>
+              </article>
+            ))}
+          </div>
           <Pager page={page} total={query.data?.total} onChange={setPage} />
-        </div>
+        </>
       )}
     </>
   );

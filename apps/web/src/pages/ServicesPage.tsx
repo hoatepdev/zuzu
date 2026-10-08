@@ -10,8 +10,8 @@ import {
   NumberField,
   PageHeader,
   SelectField,
-  Spinner,
   SwitchField,
+  TableSkeleton,
   TextField,
 } from "../components/common";
 import { Badge } from "@/components/ui/badge";
@@ -102,62 +102,94 @@ export function ServicesPage() {
       {query.error && <Banner tone="error" title={query.error.message} />}
       {save.error && <Banner tone="error" title={save.error.message} />}
       {query.error ? null : query.isLoading ? (
-        <div className="center">
-          <Spinner className="size-6" />
-        </div>
+        <TableSkeleton cols={7} />
       ) : (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>STT</TableHead>
-                <TableHead>Tên</TableHead>
-                <TableHead>Đơn vị</TableHead>
-                <TableHead>Giá</TableHead>
-                <TableHead>Mặc định chọn</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(query.data ?? []).map((service) => (
-                <TableRow key={service.id}>
-                  <TableCell>{service.stt}</TableCell>
-                  <TableCell>{service.name}</TableCell>
-                  <TableCell>
-                    {service.unit === "KG"
-                      ? "Kg"
-                      : service.unit === "PAIR"
-                        ? "Đôi"
-                        : "Món"}
-                  </TableCell>
-                  <TableCell>
-                    <Money value={service.price} />
-                  </TableCell>
-                  <TableCell>
-                    {service.isDefault && (
-                      <Badge className="status-badge st-COMPLETED">
-                        Mặc định
+        <>
+          <div className="desktop-data-table table-wrap">
+            <Table className="management-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>STT</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead>Đơn vị</TableHead>
+                  <TableHead>Giá</TableHead>
+                  <TableHead>Mặc định chọn</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(query.data ?? []).map((service) => (
+                  <TableRow key={service.id}>
+                    <TableCell>{service.stt}</TableCell>
+                    <TableCell>{service.name}</TableCell>
+                    <TableCell>
+                      {service.unit === "KG"
+                        ? "Kg"
+                        : service.unit === "PAIR"
+                          ? "Đôi"
+                          : "Món"}
+                    </TableCell>
+                    <TableCell>
+                      <Money value={service.price} />
+                    </TableCell>
+                    <TableCell>
+                      {service.isDefault && (
+                        <Badge className="status-badge st-COMPLETED">
+                          Mặc định
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`status-badge ${service.active ? "st-PROCESSING" : "st-CANCELLED"}`}
+                      >
+                        {service.active ? "Đang dùng" : "Đã tắt"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => edit(service)}>
+                        Sửa
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mobile-data-list record-list" aria-label="Danh sách dịch vụ">
+            {(query.data ?? []).map((service) => (
+              <article className="record-card" key={service.id}>
+                <div className="record-card-top">
+                  <span className="record-card-title">{service.name}</span>
+                  <Money value={service.price} />
+                </div>
+                <p className="record-card-meta">
+                  {service.unit === "KG"
+                    ? "Kg"
+                    : service.unit === "PAIR"
+                      ? "Đôi"
+                      : "Món"}
+                </p>
+                <div className="record-card-top">
+                  <span>
+                    {service.isDefault && (
+                      <Badge className="status-badge st-COMPLETED">Mặc định</Badge>
                     )}
-                  </TableCell>
-                  <TableCell>
                     <Badge
                       className={`status-badge ${service.active ? "st-PROCESSING" : "st-CANCELLED"}`}
                     >
                       {service.active ? "Đang dùng" : "Đã tắt"}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => edit(service)}>
-                      Sửa
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => edit(service)}>
+                    Sửa
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
       )}
       <Dialog
         open={!!editing}

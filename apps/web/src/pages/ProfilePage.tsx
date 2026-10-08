@@ -114,14 +114,11 @@ export function ProfilePage() {
       <PageHeader>Tài khoản</PageHeader>
       <div className="profile-wrap">
         <div className="panel profile-identity">
-          <span
-            className="avatar"
-            style={{ width: 64, height: 64, borderRadius: 20, fontSize: 22 }}
-          >
+          <span className="avatar profile-avatar-lg">
             {initials(me?.name)}
           </span>
-          <strong style={{ fontSize: 18, marginTop: 8 }}>{me?.name}</strong>
-          <span style={{ color: "var(--ink-2)" }}>
+          <strong className="profile-name">{me?.name}</strong>
+          <span className="muted-p">
             {me?.role ? roleLabels[me.role] : ""}
           </span>
         </div>
@@ -177,7 +174,7 @@ export function ProfilePage() {
                 label="Vai trò"
                 value={me?.role ? roleLabels[me.role] : undefined}
               />
-              <div className="profile-actions" style={{ marginTop: 16 }}>
+              <div className="profile-actions profile-gap-lg">
                 <Button size="lg" onClick={startEdit}>
                   CHỈNH SỬA
                 </Button>
@@ -193,8 +190,7 @@ export function ProfilePage() {
               </div>
               {changingPassword && (
                 <form
-                  className="task-form"
-                  style={{ marginTop: 12 }}
+                  className="task-form profile-gap-md"
                   onSubmit={passwordForm.handleSubmit((values) =>
                     changePassword.mutate(values),
                   )}

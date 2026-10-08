@@ -13,6 +13,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -21,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { EmptyState, Pager, Spinner } from "../common";
+import { EmptyState, Pager } from "../common";
 
 export type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
@@ -88,18 +89,20 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="table-wrap">
-      <div className="data-table-toolbar">
-        <Input
-          value={globalFilter}
-          onChange={(event) => {
-            const value = event.target.value;
-            setGlobalFilter(value);
-            onGlobalFilterChange?.(value);
-          }}
-          placeholder="Lọc bảng"
-          aria-label="Lọc bảng"
-        />
-      </div>
+      {onGlobalFilterChange && (
+        <div className="data-table-toolbar">
+          <Input
+            value={globalFilter}
+            onChange={(event) => {
+              const value = event.target.value;
+              setGlobalFilter(value);
+              onGlobalFilterChange?.(value);
+            }}
+            placeholder="Lọc bảng"
+            aria-label="Lọc bảng"
+          />
+        </div>
+      )}
       <Table className="management-table">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -128,11 +131,13 @@ export function DataTable<TData, TValue>({
         </TableHeader>
         <TableBody>
           {loading ? (
-            <TableRow>
-              <TableCell colSpan={columns.length}>
-                <div className="center"><Spinner className="size-5" /></div>
-              </TableCell>
-            </TableRow>
+            [...Array(5)].map((_, index) => (
+              <TableRow key={index}>
+                <TableCell colSpan={columns.length}>
+                  <Skeleton className="skeleton-line" />
+                </TableCell>
+              </TableRow>
+            ))
           ) : rows.length ? (
             rows.map((row) => (
               <TableRow

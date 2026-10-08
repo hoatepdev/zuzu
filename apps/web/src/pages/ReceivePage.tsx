@@ -184,6 +184,13 @@ export function ReceivePage() {
         onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
         <section className="task-section customer-section">
+          <div className="step-heading">
+            <span className="step-chip" aria-hidden="true">1</span>
+            <div>
+              <strong>Khách hàng</strong>
+              <small>Nhập SĐT hoặc tên, chọn gợi ý nếu có</small>
+            </div>
+          </div>
           <div
             className="customer-mode"
             role="group"
@@ -397,9 +404,12 @@ export function ReceivePage() {
         </section>
 
         <section className="task-section service-section">
-          <div className="section-heading">
-            <strong>Dịch vụ dự kiến</strong>
-            <small>Chỉ đánh dấu để theo dõi, chưa nhập số lượng hay giá</small>
+          <div className="step-heading">
+            <span className="step-chip" aria-hidden="true">2</span>
+            <div>
+              <strong>Dịch vụ dự kiến</strong>
+              <small>Chỉ đánh dấu để theo dõi, chưa nhập số lượng hay giá</small>
+            </div>
           </div>
           {services.isLoading ? (
             <div className="lookup-state">
@@ -428,6 +438,13 @@ export function ReceivePage() {
         </section>
 
         <section className="task-section schedule-section">
+          <div className="step-heading">
+            <span className="step-chip" aria-hidden="true">3</span>
+            <div>
+              <strong>Hẹn trả</strong>
+              <small>Ngày, buổi và địa chỉ giao nếu cần</small>
+            </div>
+          </div>
           <div className="schedule-grid">
             <Controller
               control={form.control}

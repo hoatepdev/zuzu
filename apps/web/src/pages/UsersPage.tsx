@@ -8,7 +8,7 @@ import {
   Banner,
   PageHeader,
   SelectField,
-  Spinner,
+  TableSkeleton,
   TextField,
 } from "../components/common";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,57 @@ const roleLabels: Record<string, string> = {
   MANAGER: "Quản lý",
   STAFF: "Nhân viên",
 };
+
+function UserRowActions({
+  user,
+  onEdit,
+  onToggle,
+  onReset,
+}: {
+  user: UserAccount;
+  onEdit: (user: UserAccount) => void;
+  onToggle: (user: UserAccount) => void;
+  onReset: (user: UserAccount) => void;
+}) {
+  return (
+    <div className="table-actions">
+      <Button size="sm" variant="outline" onClick={() => onEdit(user)}>
+        Sửa
+      </Button>
+      {user.role !== "OWNER" && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant={user.active ? "destructive" : "outline"}
+            >
+              {user.active ? "Khoá" : "Mở"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {user.active ? "Khoá tài khoản này?" : "Mở lại tài khoản?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {user.name} · {user.username}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Để sau</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onToggle(user)}>
+                Xác nhận
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      <Button size="sm" variant="ghost" onClick={() => onReset(user)}>
+        Đặt lại mật khẩu
+      </Button>
+    </div>
+  );
+}
 
 export function UsersPage() {
   const qc = useQueryClient();
@@ -155,102 +206,105 @@ export function UsersPage() {
         />
       )}
       {query.error ? null : query.isLoading ? (
-        <div className="center">
-          <Spinner className="size-6" />
-        </div>
+        <TableSkeleton cols={6} />
       ) : (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tên đăng nhập</TableHead>
-                <TableHead>Tên</TableHead>
-                <TableHead>SĐT</TableHead>
-                <TableHead>Vai trò</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(query.data ?? []).map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.phone ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`status-badge ${
-                        user.role === "OWNER"
-                          ? "st-READY_FOR_PICKUP"
-                          : user.role === "MANAGER"
-                            ? "st-PROCESSING"
-                            : "st-CANCELLED"
-                      }`}
-                    >
-                      {roleLabels[user.role] ?? user.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`status-badge ${user.active ? "st-COMPLETED" : "st-CANCELLED"}`}
-                    >
-                      {user.active ? "Đang hoạt động" : "Đã khoá"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="table-actions">
-                      <Button size="sm" variant="outline" onClick={() => edit(user)}>
-                        Sửa
-                      </Button>
-                      {user.role !== "OWNER" && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant={user.active ? "destructive" : "outline"}
-                            >
-                              {user.active ? "Khoá" : "Mở"}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                {user.active
-                                  ? "Khoá tài khoản này?"
-                                  : "Mở lại tài khoản?"}
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                {user.name} · {user.username}
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Để sau</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => toggle.mutate(user)}
-                              >
-                                Xác nhận
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          resetForm.reset({ password: "" });
-                          setResetting(user);
-                        }}
-                      >
-                        Đặt lại mật khẩu
-                      </Button>
-                    </div>
-                  </TableCell>
+        <>
+          <div className="desktop-data-table table-wrap">
+            <Table className="management-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tên đăng nhập</TableHead>
+                  <TableHead>Tên</TableHead>
+                  <TableHead>SĐT</TableHead>
+                  <TableHead>Vai trò</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {(query.data ?? []).map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.phone ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`status-badge ${
+                          user.role === "OWNER"
+                            ? "st-READY_FOR_PICKUP"
+                            : user.role === "MANAGER"
+                              ? "st-PROCESSING"
+                              : "st-CANCELLED"
+                        }`}
+                      >
+                        {roleLabels[user.role] ?? user.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`status-badge ${user.active ? "st-COMPLETED" : "st-CANCELLED"}`}
+                      >
+                        {user.active ? "Đang hoạt động" : "Đã khoá"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <UserRowActions
+                        user={user}
+                        onEdit={edit}
+                        onToggle={(target) => toggle.mutate(target)}
+                        onReset={(target) => {
+                          resetForm.reset({ password: "" });
+                          setResetting(target);
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mobile-data-list record-list" aria-label="Danh sách nhân viên">
+            {(query.data ?? []).map((user) => (
+              <article className="record-card" key={user.id}>
+                <div className="record-card-top">
+                  <span className="record-card-title">{user.name}</span>
+                  <Badge
+                    className={`status-badge ${user.active ? "st-COMPLETED" : "st-CANCELLED"}`}
+                  >
+                    {user.active ? "Đang hoạt động" : "Đã khoá"}
+                  </Badge>
+                </div>
+                <p className="record-card-meta">
+                  {user.username} · {user.phone ?? "chưa có SĐT"}
+                </p>
+                <div className="record-card-top">
+                  <Badge
+                    className={`status-badge ${
+                      user.role === "OWNER"
+                        ? "st-READY_FOR_PICKUP"
+                        : user.role === "MANAGER"
+                          ? "st-PROCESSING"
+                          : "st-CANCELLED"
+                    }`}
+                  >
+                    {roleLabels[user.role] ?? user.role}
+                  </Badge>
+                </div>
+                <div className="record-card-actions">
+                  <UserRowActions
+                    user={user}
+                    onEdit={edit}
+                    onToggle={(target) => toggle.mutate(target)}
+                    onReset={(target) => {
+                      resetForm.reset({ password: "" });
+                      setResetting(target);
+                    }}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
       )}
       <Dialog
         open={!!editing}

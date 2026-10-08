@@ -6,10 +6,10 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { CustomerDetail } from "../api/types";
 import {
+  ListSkeleton,
   Money,
   NumberField,
   PageHeader,
-  Spinner,
   StatusBadge,
   SwitchField,
   TextField,
@@ -80,7 +80,7 @@ export function CustomerDetailPage() {
     },
   });
   const customer = query.data;
-  if (query.isLoading) return <div className="center"><Spinner className="size-6" /></div>;
+  if (query.isLoading) return <ListSkeleton rows={6} />;
   if (!customer) return <div className="center">Không tải được khách hàng</div>;
   const edit = () => {
     form.reset({

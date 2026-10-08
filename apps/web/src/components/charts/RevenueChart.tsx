@@ -30,7 +30,12 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps) {
     <div className="chart-tooltip">
       <b>{fullDate(String(label))}</b>
       {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color }}>
+        <p key={entry.name}>
+          <i
+            className="chart-dot"
+            style={{ background: entry.color }}
+            aria-hidden="true"
+          />
           {entry.name}: {formatMoney(Number(entry.value ?? 0))}
         </p>
       ))}
@@ -52,7 +57,11 @@ export function RevenueChart({ data }: RevenueChartProps) {
   return (
     <div className="revenue-chart" aria-label="Doanh thu theo ngày">
       <ResponsiveContainer width="100%" height={260}>
-        <AreaChart data={data} margin={{ top: 10, right: 8, left: 4, bottom: 0 }}>
+        <AreaChart
+          data={data}
+          accessibilityLayer
+          margin={{ top: 10, right: 8, left: 4, bottom: 0 }}
+        >
           <defs>
             <linearGradient id="revenue-fill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--chart-revenue)" stopOpacity={0.26} />

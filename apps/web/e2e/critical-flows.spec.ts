@@ -75,3 +75,43 @@ test("manager can select an order status", async ({ page }) => {
   await page.getByRole("option", { name: "Tất cả" }).click();
   await expect(status).toHaveText("Tất cả");
 });
+
+test("staff pages have no horizontal scroll at 375px", async ({ page }) => {
+  await login(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const route of ["/staff", "/receive", "/orders"]) {
+    await page.goto(route);
+    await page.waitForLoadState("networkidle");
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+  }
+});
+
+test("management data switches between record list and table by viewport", async ({ page }) => {
+  await login(page, "manager", "zuzu123");
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/expenses");
+  await expect(page.locator(".mobile-data-list").first()).toBeVisible();
+  await expect(page.locator(".desktop-data-table").first()).toBeHidden();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/expenses");
+  await expect(page.locator(".desktop-data-table").first()).toBeVisible();
+  await expect(page.locator(".mobile-data-list").first()).toBeHidden();
+});
+
+test("keyboard focus reaches receive form controls", async ({ page }) => {
+  await login(page);
+  await page.goto("/receive");
+  await expect(page.getByRole("heading", { name: "Nhận đồ" })).toBeVisible();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  const tag = await page.evaluate(
+    () => document.activeElement?.tagName.toLowerCase(),
+  );
+  expect(["button", "input", "a"]).toContain(tag);
+});

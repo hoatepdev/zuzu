@@ -11,13 +11,13 @@ import {
   NumberField,
   PageHeader,
   Pager,
+  TableSkeleton,
   TextField,
 } from "../components/common";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -189,87 +189,105 @@ export function ExpensesPage() {
         <Banner tone="error" title={query.error.message} />
       )}
       {query.isLoading ? (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ngày</TableHead>
-                <TableHead>Nhóm</TableHead>
-                <TableHead>Nội dung</TableHead>
-                <TableHead>Thanh toán</TableHead>
-                <TableHead>Số tiền</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell colSpan={7}>
-                    <Skeleton className="skeleton-line" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <TableSkeleton cols={7} />
       ) : (
-        <div className="table-wrap">
-          <Table className="management-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ngày</TableHead>
-                <TableHead>Nhóm</TableHead>
-                <TableHead>Nội dung</TableHead>
-                <TableHead>Thanh toán</TableHead>
-                <TableHead>Số tiền</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(query.data?.items ?? []).map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    {new Date(row.expenseDate).toLocaleDateString("vi-VN")}
-                  </TableCell>
-                  <TableCell>{row.category}</TableCell>
-                  <TableCell>{row.description}</TableCell>
-                  <TableCell>
-                    {row.paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản"}
-                  </TableCell>
-                  <TableCell>
-                    <Money value={row.amount} />
-                  </TableCell>
-                  <TableCell>
-                    {row.voidedAt ? (
-                      <Badge className="status-badge st-CANCELLED">Đã huỷ</Badge>
-                    ) : (
-                      <Badge className="status-badge st-COMPLETED">Hợp lệ</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {!row.voidedAt && (
-                      <div className="table-actions">
-                        <Button size="sm" variant="outline" onClick={() => edit(row)}>
-                          Sửa
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setVoiding(row)}
-                        >
-                          Huỷ
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
+        <>
+          <div className="desktop-data-table table-wrap">
+            <Table className="management-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ngày</TableHead>
+                  <TableHead>Nhóm</TableHead>
+                  <TableHead>Nội dung</TableHead>
+                  <TableHead>Thanh toán</TableHead>
+                  <TableHead>Số tiền</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(query.data?.items ?? []).map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>
+                      {new Date(row.expenseDate).toLocaleDateString("vi-VN")}
+                    </TableCell>
+                    <TableCell>{row.category}</TableCell>
+                    <TableCell>{row.description}</TableCell>
+                    <TableCell>
+                      {row.paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản"}
+                    </TableCell>
+                    <TableCell>
+                      <Money value={row.amount} />
+                    </TableCell>
+                    <TableCell>
+                      {row.voidedAt ? (
+                        <Badge className="status-badge st-CANCELLED">Đã huỷ</Badge>
+                      ) : (
+                        <Badge className="status-badge st-COMPLETED">Hợp lệ</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {!row.voidedAt && (
+                        <div className="table-actions">
+                          <Button size="sm" variant="outline" onClick={() => edit(row)}>
+                            Sửa
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setVoiding(row)}
+                          >
+                            Huỷ
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div
+            className="mobile-data-list record-list"
+            aria-label="Danh sách khoản chi"
+          >
+            {(query.data?.items ?? []).map((row) => (
+              <article className="record-card" key={row.id}>
+                <div className="record-card-top">
+                  <span className="record-card-title">{row.description}</span>
+                  <Money value={row.amount} />
+                </div>
+                <p className="record-card-meta">
+                  {new Date(row.expenseDate).toLocaleDateString("vi-VN")} ·{" "}
+                  {row.category} ·{" "}
+                  {row.paymentMethod === "CASH" ? "Tiền mặt" : "Chuyển khoản"}
+                </p>
+                <div className="record-card-top">
+                  {row.voidedAt ? (
+                    <Badge className="status-badge st-CANCELLED">Đã huỷ</Badge>
+                  ) : (
+                    <Badge className="status-badge st-COMPLETED">Hợp lệ</Badge>
+                  )}
+                  {!row.voidedAt && (
+                    <div className="table-actions">
+                      <Button size="sm" variant="outline" onClick={() => edit(row)}>
+                        Sửa
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setVoiding(row)}
+                      >
+                        Huỷ
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
           <Pager page={page} total={query.data?.total} onChange={setPage} />
-        </div>
+        </>
       )}
       <Dialog
         open={!!editing}

@@ -6,11 +6,12 @@ import { api } from '../api/client';
 import { Page, Shift } from '../api/types';
 import {
   Banner,
+  ListSkeleton,
   Money,
   NumberField,
   PageHeader,
   Pager,
-  Spinner,
+  TableSkeleton,
 } from '../components/common';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +35,7 @@ export function ShiftsPage() {
     <PageHeader sub="Đối soát tiền mặt cuối ngày">Chốt ca</PageHeader>
     {(query.error || open.error || close.error) && <Banner tone="error" title={(query.error || open.error || close.error)?.message} />}
     <div className="panel">
-      {query.error ? null : query.isLoading ? <div className="center"><Spinner className="size-6" /></div> : query.data ? <>
+      {query.error ? null : query.isLoading ? <ListSkeleton rows={5} /> : query.data ? <>
         <div className="detail-list">
           <div className="detail-row"><span>Mở lúc</span><strong>{new Date(query.data.openedAt).toLocaleString('vi-VN')}</strong></div>
           <div className="detail-row"><span>Người mở</span><strong>{query.data.openedBy.name}</strong></div>
@@ -42,7 +43,7 @@ export function ShiftsPage() {
           <div className="detail-row"><span>Chuyển khoản</span><strong><Money value={query.data.bankTransferRevenue ?? '0'}/></strong></div>
           <div className="detail-row"><span>Chi tiền mặt</span><strong><Money value={query.data.cashExpenses ?? '0'}/></strong></div>
         </div>
-        <form className="task-form" style={{ marginTop: 16 }} onSubmit={form.handleSubmit((values) => close.mutate(values))}>
+        <form className="task-form shift-close-form" onSubmit={form.handleSubmit((values) => close.mutate(values))}>
           <NumberField
             control={form.control}
             name="actualCash"
@@ -59,10 +60,10 @@ export function ShiftsPage() {
       <h2 className="panel-title">Lịch sử ca</h2>
       {history.error && <Banner tone="error" title={history.error.message} />}
       {history.error ? null : history.isLoading ? (
-        <div className="center"><Spinner className="size-6" /></div>
+        <TableSkeleton cols={7} rows={4} />
       ) : (
         <>
-          <div className="table-wrap">
+          <div className="desktop-data-table table-wrap">
             <Table className="management-table">
               <TableHeader>
                 <TableRow>
@@ -85,7 +86,7 @@ export function ShiftsPage() {
                     <TableCell><Money value={shift.cashExpenses ?? '0'}/></TableCell>
                     <TableCell><Money value={shift.actualCash ?? '0'}/></TableCell>
                     <TableCell>
-                      <span style={{ color: Number(shift.difference ?? 0) < 0 ? 'var(--error)' : undefined }}>
+                      <span className={Number(shift.difference ?? 0) < 0 ? 'negative' : undefined}>
                         <Money value={shift.difference ?? '0'}/>
                       </span>
                     </TableCell>
@@ -93,6 +94,28 @@ export function ShiftsPage() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+          <div className="mobile-data-list record-list" aria-label="Lịch sử ca">
+            {(history.data?.items ?? []).map((shift) => (
+              <article className="record-card" key={shift.id}>
+                <div className="record-card-top">
+                  <span className="record-card-title">
+                    {shift.closedAt
+                      ? `Chốt ${new Date(shift.closedAt).toLocaleDateString('vi-VN')}`
+                      : `Đang mở · ${new Date(shift.openedAt).toLocaleDateString('vi-VN')}`}
+                  </span>
+                  <span className={Number(shift.difference ?? 0) < 0 ? 'negative' : undefined}>
+                    <Money value={shift.difference ?? '0'}/>
+                  </span>
+                </div>
+                <p className="record-card-meta">
+                  Mở {new Date(shift.openedAt).toLocaleString('vi-VN')} · {shift.closedBy?.name ?? 'chưa chốt'}
+                </p>
+                <p className="record-card-meta">
+                  Doanh thu TM <b><Money value={shift.cashRevenue ?? '0'}/></b> · Chi <b><Money value={shift.cashExpenses ?? '0'}/></b> · Thực tế <b><Money value={shift.actualCash ?? '0'}/></b>
+                </p>
+              </article>
+            ))}
           </div>
           <Pager page={page} total={history.data?.total} onChange={setPage} />
         </>

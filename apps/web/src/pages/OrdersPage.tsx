@@ -8,12 +8,13 @@ import { DataTable } from "../components/data-table/DataTable";
 import {
   Banner,
   EmptyState,
+  ListSkeleton,
   Money,
   OrderCard,
   PageHeader,
   QuickChoice,
-  Spinner,
   StatusBadge,
+  TableSkeleton,
 } from "../components/common";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,9 +215,11 @@ export function OrdersPage() {
         />
       )}
       {orders.error ? null : orders.isLoading ? (
-        <div className="center">
-          <Spinner className="size-6" />
-        </div>
+        management ? (
+          <TableSkeleton cols={7} />
+        ) : (
+          <ListSkeleton rows={5} />
+        )
       ) : items?.length ? (
         <>
           {management && (

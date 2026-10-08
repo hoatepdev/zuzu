@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Customer, Page } from '../api/types';
-import { Banner, EmptyState, Money, PageHeader, Spinner } from '../components/common';
+import { Banner, EmptyState, ListSkeleton, Money, PageHeader } from '../components/common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -32,7 +32,7 @@ export function CustomersPage() {
     {query.error && <Banner tone="error" title={query.error.message} />}
     <div className="panel">
       {query.isLoading
-        ? <div className="center"><Spinner className="size-6" /></div>
+        ? <ListSkeleton rows={5} />
         : query.error
           ? null
           : query.data?.items.length

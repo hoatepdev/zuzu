@@ -21,59 +21,64 @@ Nguồn định hướng: UI UX Pro Max searches cho B2B/cleaning service, flat 
 
 ### 2.1 Color tokens
 
+Nguồn sự thật là `apps/web/src/styles.css` (shadcn semantic tokens + brand tokens). Bản tóm tắt:
+
 ```css
 :root {
-  --color-primary: #0369a1;
-  --color-primary-hover: #075985;
-  --color-primary-soft: #e0f2fe;
+  /* brand */
+  --brand: #0e7c66;          /* ZUZU teal: CTA, link, active, focus */
+  --brand-deep: #0a5f4f;
+  --brand-ink: #084a3d;
+  --brand-soft: #e1f0e9;
+  --brand-mist: #eff7f2;
+  --mint: #9fe3c6;           /* accent trên nền tối (panel, scanner) */
 
-  --color-success: #166534;
-  --color-success-bg: #f0fdf4;
-  --color-warning: #92400e;
-  --color-warning-bg: #fffbeb;
-  --color-error: #b91c1c;
-  --color-error-bg: #fef2f2;
+  /* page & ink */
+  --page: #f7f3ea;           /* giấy ấm */
+  --page-deep: #f0eadc;
+  --surface: #ffffff;
+  --surface-warm: #fbf8f1;
+  --ink: #1a2420;
+  --ink-2: #46534c;
+  --ink-3: #68756d;
 
-  --color-text: #0f172a;
-  --color-text-muted: #475569;
-  --color-border: #cbd5e1;
-  --color-border-subtle: #e2e8f0;
-  --color-surface: #ffffff;
-  --color-page: #f8fafc;
-  --color-disabled: #94a3b8;
+  /* status */
+  --success: #217a43;  --success-bg: #e5f3e7;
+  --warning: #805500;  --warning-bg: #fbf0d9;
+  --error: #c0392b;    --error-bg: #fbe9e5;
+
+  /* dark panel (side nav, scanner) */
+  --panel-ink: #14251f;
+  --panel-ink-2: #1c332b;
+  --panel-text: #c6d5cd;
+  --panel-line: #2a443a;
+
+  /* line & chart */
+  --line: #e7dfce;
+  --line-soft: #efe9db;
+  --chart-revenue: var(--brand);
+  --chart-expenses: var(--error);
+  --chart-grid: var(--line-soft);
 }
 ```
 
 Rules:
 
-- Blue là primary cho điều hướng và CTA.
-- Green chỉ dùng completed/success/payment success.
-- Amber dùng waiting/attention.
-- Red dùng destructive/error.
-- Mỗi state luôn có text; icon chỉ bổ trợ.
-- Không dùng orange làm CTA vì dễ xung đột waiting state.
-- Không dùng raw hex trong screen component; khai báo qua Tailwind semantic token hoặc CSS token.
-
-Contrast đã kiểm tra:
-
-| Pair | Ratio |
-|---|---:|
-| Primary hover `#075985` / white | 7.56:1 |
-| Primary `#0369a1` / white | 5.93:1 |
-| Text `#0f172a` / white | 17.85:1 |
-| Muted `#475569` / page | 7.24:1 |
-| Success text/background | 6.81:1 |
-| Warning text/background | 6.84:1 |
-| Error text/background | 5.91:1 |
+- Teal `--brand` là primary cho điều hướng, CTA, selected state và focus ring.
+- Green chỉ dùng completed/success/payment success; amber dùng waiting/attention; red dùng destructive/error.
+- Mỗi state luôn có text; icon và dot chỉ bổ trợ, không dùng màu làm tín hiệu duy nhất.
+- Không dùng raw hex trong screen component; khai báo qua CSS token hoặc Tailwind semantic token map trong `@theme inline`.
+- Text của chart/tooltip/legend luôn dùng ink tokens; màu series chỉ nằm trên mark/swatch.
 
 ### 2.2 Typography
 
-Không tải webfont ở operational app. Dùng system stack để PWA hiển thị ngay khi mạng yếu/offline và tránh thêm request/font dependency.
+App dùng **Be Vietnam Pro** (sans) và **Spline Sans Mono** (số/mã), tải qua Google Fonts với `display=swap` trong `apps/web/index.html`; fallback là system stack để PWA vẫn đọc được khi offline.
 
 ```css
---font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-  "Segoe UI", "Noto Sans", Arial, sans-serif;
---font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+--font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, -apple-system,
+  "Segoe UI", sans-serif;
+--font-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Consolas,
+  monospace;
 ```
 
 | Role | Size / line | Weight | Dùng cho |
@@ -117,15 +122,17 @@ Base unit 4px.
 ### 2.4 Radius, border, shadow
 
 ```text
---radius-sm: 6px
---radius-md: 10px
---radius-lg: 14px
---shadow-raised: 0 8px 24px rgb(15 23 42 / 8%)
+--radius-xs: 9px    /* dòng con, callout, khối nhỏ trong card */
+--radius-sm: 12px   /* control, badge vuông, list item */
+--radius: 16px      /* card/panel/section */
+--radius-xl: 18px   /* khối hero, viewport scanner */
+--shadow-1: 0 1px 2px rgba(26, 36, 32, 0.05)
+--shadow-2: 0 1px 2px rgba(26, 36, 32, 0.04), 0 10px 28px rgba(26, 36, 32, 0.09)
 ```
 
-- Default component radius: 8–10px.
-- Card không phải wrapper mặc định.
-- Shadow chỉ cho modal/drawer/floating bottom bar; content block dùng border/surface.
+- Default control radius: 12px; card/panel: 16px; scanner/hero: 18px.
+- Card không phải wrapper mặc định; danh sách dày ưu tiên divide/border.
+- Shadow-1 cho card tĩnh, shadow-2 cho hover/floating; modal/drawer dùng shadow của overlay primitive.
 - Không pill mọi thứ; pill chỉ status badge/compact choice.
 
 ### 2.5 Motion
@@ -191,14 +198,16 @@ Component policy:
 
 - `Button` (shadcn): size lg = 54px cho mobile primary; mọi size tối thiểu 44px.
 - `Input`/`Textarea` + class `.input-lg` (54px) trong staff flow; số tiền dùng `AmountInput` (mono, 64px, hậu tố đ).
-- `Select`: **native `<select>`** style `.service-select` — giữ được selectOption/e2e và mobile picker.
+- `Select`: Radix Select qua shadcn (`components/ui/select.tsx`), trigger full-width; height theo ngữ cảnh (44px compact, 54px filter/form).
 - `DatePicker`: **native `<input type="date">`** (`.date-input`), cặp Từ/Đến cho range.
-- `Table` (shadcn primitives + `.management-table`): management desktop ≥1024px; mobile dùng card list.
-- `Dialog`/`AlertDialog` (Radix): admin edit/confirm; không dùng cho core mobile flow.
+- `Table` (shadcn primitives + `.management-table`): management desktop ≥1024px; mobile/tablet dùng record card list (`.record-list`/`.record-card`) — không để table cuộn ngang dưới 1024px.
+- `Dialog`/`AlertDialog` (Radix): admin edit/confirm; scroll an toàn trên mobile, label tiếng Việt.
 - `Sheet` (Radix): drawer navigation tablet.
 - `QuickChoice`: grid button + `aria-pressed`, không dùng radio ẩn.
 - `Banner`: thay Alert — tone success/error/warning/info, có action + close.
 - Toast: sonner `<Toaster position="top-center" richColors>`.
+- Loading: skeleton theo hình final content (`TableSkeleton`, `ListSkeleton`, `.order-loading`); spinner chỉ cho inline lookup/action.
+- Motion: `MotionConfig reducedMotion="user"` ở root; chỉ feedback/state 150–200ms, không entrance sequence, không animation vô hạn.
 
 ## 4. Interaction rules
 
@@ -279,10 +288,10 @@ Quản lý
 
 | Status | Label | Tone | Form ngoài màu |
 |---|---|---|---|
-| `PROCESSING` | Đang xử lý | primary blue | text + progress/open-circle icon |
-| `READY_FOR_PICKUP` | Chờ khách lấy | warning amber | text + clock/bag icon |
-| `COMPLETED` | Đã trả | success green | text + check icon |
-| `CANCELLED` | Đã huỷ | neutral/error depending context | text + stop icon |
+| `PROCESSING` | Đang xử lý | brand teal (`--brand-soft`/`--brand-ink`) | text + dot |
+| `READY_FOR_PICKUP` | Chờ khách lấy | warning amber | text + dot |
+| `COMPLETED` | Đã trả | success green | text + dot |
+| `CANCELLED` | Đã huỷ | neutral (`--page-deep`/`--ink-2`) | text + dot |
 | Unknown customer | Chưa xác định khách | neutral warning | outlined badge + person-question icon |
 | Notification error | Gửi Zalo lỗi | error | alert stripe + retry action |
 | Print error | Không in được bill | error | alert block + retry/continue |

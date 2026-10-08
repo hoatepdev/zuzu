@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,8 +16,10 @@ export function AdminProviders() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster position="top-center" richColors closeButton />
+      <MotionConfig reducedMotion="user">
+        <Outlet />
+        <Toaster position="top-center" richColors closeButton />
+      </MotionConfig>
     </QueryClientProvider>
   );
 }

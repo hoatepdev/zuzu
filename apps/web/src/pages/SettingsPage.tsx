@@ -120,7 +120,7 @@ export function SettingsPage() {
           <div className="center" role="status">Đang tải trạng thái kết nối...</div>
         ) : status === "CONNECTED" && zalo.data?.account ? (
           <>
-            <Badge className="status-badge st-COMPLETED">● Đã kết nối</Badge>
+            <Badge className="status-badge st-COMPLETED">Đã kết nối</Badge>
             <div className="zalo-account">
               {zalo.data.account.avatar && (
                 <img

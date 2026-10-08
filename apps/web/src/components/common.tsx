@@ -16,7 +16,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -661,6 +670,51 @@ export function EmptyState({
       </span>
       <p>{description}</p>
       {action}
+    </div>
+  );
+}
+
+export function TableSkeleton({
+  cols = 5,
+  rows = 5,
+}: {
+  cols?: number;
+  rows?: number;
+}) {
+  return (
+    <div className="table-wrap" role="status" aria-label="Đang tải dữ liệu">
+      <Table className="management-table">
+        <TableHeader>
+          <TableRow>
+            {[...Array(cols)].map((_, col) => (
+              <TableHead key={col}>
+                <Skeleton className="skeleton-line" />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(rows)].map((_, row) => (
+            <TableRow key={row}>
+              {[...Array(cols)].map((_, col) => (
+                <TableCell key={col}>
+                  <Skeleton className="skeleton-line" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+export function ListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="panel record-skeleton-list" role="status" aria-label="Đang tải dữ liệu">
+      {[...Array(rows)].map((_, row) => (
+        <Skeleton key={row} className="skeleton-line" />
+      ))}
     </div>
   );
 }
