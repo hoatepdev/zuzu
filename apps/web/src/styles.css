@@ -2175,8 +2175,12 @@ h3 {
   height: 8px;
   border-radius: 999px;
 }
-.chart-dot.revenue { background: var(--chart-revenue); }
-.chart-dot.expenses { background: var(--chart-expenses); }
+.chart-dot.revenue {
+  background: var(--chart-revenue);
+}
+.chart-dot.expenses {
+  background: var(--chart-expenses);
+}
 .chart-tooltip {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -2825,6 +2829,20 @@ button {
   .filter-bar {
     grid-template-columns: minmax(300px, 1fr) 220px;
   }
+  .receive-page .page-header,
+  .receive-page > .banner,
+  .receive-page .receive-form {
+    width: min(100%, 1200px);
+  }
+  .receive-page .receive-form {
+    grid-template-columns: minmax(0, 1.6fr) minmax(360px, 420px);
+  }
+  .receive-page .receive-services {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .receive-page .receive-service {
+    min-height: 60px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3234,4 +3252,827 @@ table.management-table {
 .pager button:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* ---------- receive · counter workspace ---------- */
+.receive-page {
+  --receive-line: var(--line);
+  --receive-soft: var(--surface-warm);
+  --receive-accent: var(--brand);
+  min-width: 0;
+}
+.receive-page .page-header,
+.receive-page > .banner,
+.receive-page .receive-form {
+  width: min(100%, 1120px);
+  margin-inline: auto;
+}
+.receive-page .page-header {
+  margin-bottom: 20px;
+}
+.receive-page .page-header h1 {
+  font-size: clamp(26px, 3vw, 34px);
+  letter-spacing: -0.035em;
+}
+.receive-page > .banner {
+  margin-bottom: 16px;
+}
+.receive-page .receive-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 32px;
+  align-items: start;
+}
+.receive-page .receive-main-column,
+.receive-page .receive-side-column {
+  display: grid;
+  gap: 28px;
+  min-width: 0;
+}
+.receive-page .receive-side-column {
+  position: sticky;
+  top: 18px;
+}
+.receive-page .receive-block {
+  min-width: 0;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid var(--receive-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.receive-page .customer-section {
+  padding-top: 0;
+  border-top: 2px solid var(--receive-accent);
+}
+.receive-page .step-heading {
+  display: block;
+  margin: 0 0 16px;
+  padding: 16px 0 0;
+}
+.receive-page .step-heading .step-chip {
+  display: none;
+}
+.receive-page .step-heading strong {
+  display: block;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 24px;
+}
+.receive-page .step-heading small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+.receive-page .customer-mode {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.receive-page .customer-mode button {
+  min-height: 44px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+}
+.receive-page .customer-lookup,
+.receive-page .new-customer-panel,
+.receive-page .new-customer-fields,
+.receive-page .customer-suggestions,
+.receive-page .customer-resolved,
+.receive-page .unknown-banner,
+.receive-page .lookup-state,
+.receive-page .lookup-feedback,
+.receive-page .receive-services,
+.receive-page .receive-empty,
+.receive-page .schedule-grid,
+.receive-page .note-section > .field,
+.receive-page .note-section > .text-area {
+  margin-inline: 0;
+}
+.receive-page .customer-lookup {
+  margin-bottom: 12px;
+}
+.receive-page .customer-lookup .field > label {
+  color: var(--ink);
+  font-size: 14px;
+}
+.receive-page .customer-lookup .input-lg {
+  height: 58px !important;
+  border-color: var(--input);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  font-size: 17px !important;
+  box-shadow: none;
+}
+.receive-page .customer-lookup .input-lg:focus-visible {
+  border-color: var(--receive-accent);
+  box-shadow: var(--focus-ring);
+}
+.receive-page .customer-suggestions {
+  display: grid;
+  gap: 0;
+  margin-top: 4px;
+  margin-bottom: 16px;
+  border-top: 1px solid var(--receive-line);
+  border-bottom: 1px solid var(--receive-line);
+  background: transparent;
+}
+.receive-page .customer-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.receive-page .customer-suggestion:last-child {
+  border-bottom: 0;
+}
+.receive-page .customer-suggestion:hover {
+  background: var(--surface-warm);
+}
+.receive-page .customer-suggestion-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.receive-page .customer-suggestion-copy strong,
+.receive-page .customer-resolved strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+.receive-page .customer-suggestion-copy small,
+.receive-page .customer-resolved .mono {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.receive-page .customer-suggestion-action {
+  flex: none;
+  color: var(--brand-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+.receive-page .customer-resolved {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-xs);
+  background: var(--brand-mist);
+}
+.receive-page .customer-resolved > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.receive-page .customer-resolved small {
+  color: var(--brand-ink);
+  font-size: 12px;
+}
+.receive-page .customer-resolved button {
+  min-height: 44px;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+.receive-page .lookup-state,
+.receive-page .lookup-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.receive-page .lookup-feedback {
+  justify-content: space-between;
+  padding: 12px 0;
+  border-block: 1px solid var(--line-soft);
+}
+.receive-page .lookup-error {
+  color: var(--error);
+}
+.receive-page .lookup-feedback button {
+  min-height: 44px;
+}
+.receive-page .new-customer-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 12px 0;
+  border-block: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.receive-page .new-customer-panel button {
+  min-height: 44px;
+}
+.receive-page .new-customer-fields {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+.receive-page .unknown-banner {
+  margin-top: 8px;
+  padding: 12px 0;
+  border-block: 1px solid var(--line-soft);
+  color: var(--warning);
+  font-size: 14px;
+  font-weight: 650;
+}
+.receive-page .service-section .step-heading {
+  margin-bottom: 12px;
+}
+.receive-page .receive-services {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--receive-line);
+  border-bottom: 1px solid var(--receive-line);
+}
+.receive-page .receive-service {
+  display: grid;
+  grid-template-columns: 24px 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.receive-page .receive-service:last-child {
+  border-bottom: 0;
+}
+.receive-page .receive-service:hover {
+  background: var(--surface-warm);
+}
+.receive-page .receive-service.selected {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  box-shadow: inset 3px 0 0 var(--receive-accent);
+}
+.receive-page .receive-service-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--input);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.receive-page .receive-service.selected .receive-service-check {
+  border-color: var(--receive-accent);
+  background: var(--receive-accent);
+  color: var(--primary-foreground);
+}
+.receive-page .receive-service.selected .receive-service-check svg {
+  color: var(--primary-foreground);
+  stroke: currentColor;
+}
+.receive-page .receive-service-index {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.receive-page .receive-service-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 650;
+}
+.receive-page .receive-service-meta {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.receive-page .receive-service-meta small {
+  color: var(--brand-deep);
+  font-size: 11px;
+}
+.receive-page .receive-empty {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+.receive-page .schedule-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.receive-page .date-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.receive-page .date-shortcuts button,
+.receive-page .quick-choice button {
+  min-width: 0;
+  min-height: 44px;
+  border-radius: var(--radius-xs);
+  font-size: 13px;
+}
+.receive-page .date-shortcuts button[aria-pressed="true"],
+.receive-page .quick-choice button[aria-pressed="true"] {
+  border-color: var(--receive-accent);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+}
+.receive-page .date-input {
+  min-height: 52px;
+  min-width: 0;
+  border-color: var(--input);
+  border-radius: var(--radius-xs);
+  box-shadow: none;
+}
+.receive-page .note-section > .field {
+  display: grid;
+  gap: 8px;
+}
+.receive-page .note-section .quick-choice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.receive-page .note-section .text-area {
+  min-height: 96px;
+}
+.receive-page .note-section .field + .field {
+  margin-top: 14px;
+}
+.receive-page .bottom-action-bar {
+  grid-column: 1 / -1;
+  position: static;
+  display: flex;
+  justify-content: flex-end;
+  padding: 2px 0 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.receive-page .bottom-action-bar > button {
+  width: min(100%, 300px);
+  height: 56px;
+  border-radius: var(--radius-xs);
+  box-shadow: none;
+}
+@media (max-width: 1023px) {
+  .receive-page .receive-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .receive-page .receive-main-column,
+  .receive-page .receive-side-column {
+    gap: 0;
+  }
+  .receive-page .receive-side-column {
+    position: static;
+  }
+  .receive-page .receive-block {
+    padding-block: 20px;
+  }
+  .receive-page .customer-section {
+    padding-top: 0;
+  }
+  .receive-page .bottom-action-bar {
+    justify-content: stretch;
+  }
+  .receive-page .bottom-action-bar > button {
+    width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .receive-page {
+    --receive-mobile-gutter: 2px;
+    --receive-block-radius: 18px;
+  }
+  .receive-page .page-header {
+    align-items: flex-start;
+    margin: -2px 0 18px;
+    padding-inline: var(--receive-mobile-gutter);
+  }
+  .receive-page .page-header h1 {
+    font-size: 28px;
+    letter-spacing: -0.045em;
+  }
+  .receive-page .receive-form {
+    gap: 12px;
+    padding-bottom: 110px;
+  }
+  .receive-page .receive-main-column,
+  .receive-page .receive-side-column {
+    gap: 12px;
+  }
+  .receive-page .receive-block {
+    position: relative;
+    padding: 18px 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--receive-block-radius);
+    background: color-mix(in srgb, var(--surface) 88%, var(--page));
+    box-shadow: var(--shadow-1);
+  }
+  .receive-page .receive-block::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 16px;
+    width: 42px;
+    height: 3px;
+    border-radius: 0 0 999px 999px;
+    background: var(--brand);
+  }
+  .receive-page .customer-section {
+    border-top: 1px solid var(--line);
+  }
+  .receive-page .step-heading {
+    margin-bottom: 16px;
+    padding: 0;
+  }
+  .receive-page .step-heading strong {
+    font-size: 17px;
+    line-height: 23px;
+    letter-spacing: -0.015em;
+  }
+  .receive-page .step-heading small {
+    margin-top: 3px;
+    font-size: 12.5px;
+    line-height: 18px;
+  }
+  .receive-page .customer-mode {
+    width: 100%;
+    margin-bottom: 14px;
+  }
+  .receive-page .customer-mode button {
+    min-height: 48px;
+    padding-inline: 8px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .receive-page .customer-lookup .input-lg {
+    height: 56px !important;
+    font-size: 16px !important;
+  }
+  .receive-page .customer-resolved {
+    margin-bottom: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
+  }
+  .receive-page .receive-services {
+    margin-inline: -4px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    background: var(--surface-warm);
+  }
+  .receive-page .receive-service {
+    grid-template-columns: 24px 20px minmax(0, 1fr) auto;
+    gap: 8px;
+    min-height: 62px;
+    padding: 9px 12px;
+    border-bottom-color: var(--line);
+  }
+  .receive-page .receive-service:first-child {
+    border-radius: 13px 13px 0 0;
+  }
+  .receive-page .receive-service:last-child {
+    border-radius: 0 0 13px 13px;
+  }
+  .receive-page .receive-service.selected {
+    background: var(--brand-soft);
+    box-shadow: inset 3px 0 0 var(--receive-accent);
+  }
+  .receive-page .receive-service-check {
+    width: 23px;
+    height: 23px;
+  }
+  .receive-page .receive-service-name {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .receive-page .receive-service-meta {
+    min-width: 50px;
+    font-size: 11.5px;
+  }
+  .receive-page .receive-service-meta small {
+    font-size: 10px;
+  }
+  .receive-page .note-section .field,
+  .receive-page .schedule-section > .field {
+    gap: 8px;
+  }
+  .receive-page .note-section .text-area {
+    min-height: 112px;
+    padding: 13px 14px;
+    border-radius: 13px;
+    background: var(--surface-warm);
+    box-shadow: none;
+    resize: vertical;
+  }
+  .receive-page .schedule-grid {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .receive-page .schedule-grid > .field {
+    gap: 8px;
+  }
+  .receive-page .schedule-grid > .field > label,
+  .receive-page .schedule-section > .field > label {
+    color: var(--ink-2);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .receive-page .date-input {
+    min-height: 52px;
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: none;
+  }
+  .receive-page .date-shortcuts,
+  .receive-page .quick-choice {
+    gap: 7px;
+  }
+  .receive-page .date-shortcuts button,
+  .receive-page .quick-choice button {
+    min-height: 46px;
+    padding-inline: 6px;
+    border-radius: 11px;
+    font-size: 12.5px;
+  }
+  .receive-page .schedule-section > .field .quick-choice {
+    width: 100%;
+  }
+  .receive-page .schedule-section > .field .quick-choice button {
+    min-height: 48px;
+  }
+  .receive-page .schedule-section > .field .text-area {
+    min-height: 92px;
+    border-radius: 13px;
+    background: var(--surface-warm);
+    box-shadow: none;
+  }
+  .receive-page .bottom-action-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    z-index: 15;
+    padding: 10px 16px 12px;
+    border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+    background: color-mix(in srgb, var(--page) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .receive-page .bottom-action-bar > button {
+    height: 56px;
+    border-radius: 14px;
+    box-shadow: 0 8px 18px rgba(14, 124, 102, 0.2);
+    font-size: 15px;
+    letter-spacing: 0.015em;
+  }
+}
+
+/* ---------- receive · tablet workspace ---------- */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .receive-page .page-header,
+  .receive-page > .banner,
+  .receive-page .receive-form {
+    width: min(100%, 760px);
+  }
+
+  .receive-page .page-header {
+    margin-bottom: 22px;
+  }
+
+  .receive-page .receive-form {
+    gap: 20px;
+  }
+
+  .receive-page .receive-main-column,
+  .receive-page .receive-side-column {
+    gap: 20px;
+  }
+
+  .receive-page .receive-block {
+    padding: 22px 24px 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+  }
+
+  .receive-page .customer-section {
+    border-top: 3px solid var(--receive-accent);
+  }
+
+  .receive-page .step-heading {
+    margin-bottom: 18px;
+    padding-top: 0;
+  }
+
+  .receive-page .receive-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-warm);
+  }
+
+  .receive-page .receive-service {
+    min-height: 64px;
+    padding: 10px 12px;
+    border-right: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .receive-page .receive-service:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .receive-page .receive-service:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .receive-page .schedule-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .receive-page .schedule-grid > .field:first-child,
+  .receive-page .schedule-grid .date-shortcuts,
+  .receive-page .schedule-grid > .field:last-child {
+    grid-area: auto;
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .receive-page .schedule-grid .date-shortcuts {
+    align-self: stretch;
+  }
+
+  .receive-page .schedule-grid .quick-choice {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .receive-page .schedule-section > .field {
+    margin-top: 4px;
+  }
+
+  .receive-page .bottom-action-bar {
+    padding-top: 4px;
+  }
+
+  .receive-page .bottom-action-bar > button {
+    width: min(100%, 320px);
+    margin-inline: auto;
+  }
+}
+
+/* ---------- receive · laptop workspace ---------- */
+@media (min-width: 1024px) {
+  .receive-page .page-header,
+  .receive-page > .banner,
+  .receive-page .receive-form {
+    width: min(100%, 1120px);
+  }
+
+  .receive-page .receive-form {
+    grid-template-columns: minmax(0, 1.08fr) minmax(300px, 0.92fr);
+    gap: 24px;
+  }
+
+  .receive-page .receive-main-column,
+  .receive-page .receive-side-column {
+    gap: 20px;
+  }
+
+  .receive-page .receive-side-column {
+    top: 24px;
+  }
+
+  .receive-page .receive-block {
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+  }
+
+  .receive-page .customer-section {
+    border-top: 3px solid var(--receive-accent);
+  }
+
+  .receive-page .step-heading {
+    margin-bottom: 18px;
+    padding-top: 0;
+  }
+
+  .receive-page .receive-services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-warm);
+  }
+
+  .receive-page .receive-service {
+    position: relative;
+    min-height: 62px;
+    padding: 9px 12px;
+    grid-template-columns: 24px 24px minmax(0, 1fr);
+  }
+
+  .receive-page .receive-service:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .receive-page .receive-service:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .receive-page .receive-service-name {
+    padding-right: 50px;
+  }
+
+  .receive-page .receive-service-meta {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    width: 42px;
+    max-width: 42px;
+    transform: translateY(-50%);
+    white-space: normal;
+    text-align: right;
+  }
+
+  .receive-page .schedule-section {
+    gap: 0 18px;
+  }
+
+  .receive-page .schedule-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    gap: 14px;
+  }
+
+  .receive-page .schedule-grid > .field:first-child,
+  .receive-page .schedule-grid .date-shortcuts,
+  .receive-page .schedule-grid > .field:last-child {
+    grid-area: auto;
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .receive-page .schedule-grid .date-shortcuts {
+    margin: 0;
+  }
+
+  .receive-page .schedule-section > .field {
+    margin-top: 4px;
+  }
+
+  .receive-page .note-section .text-area,
+  .receive-page .schedule-section .text-area {
+    resize: vertical;
+  }
+
+  .receive-page .bottom-action-bar {
+    padding-top: 4px;
+  }
+
+  .receive-page .bottom-action-bar > button {
+    width: min(100%, 320px);
+    margin-inline: auto;
+  }
 }

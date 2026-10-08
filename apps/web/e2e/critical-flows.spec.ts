@@ -47,7 +47,7 @@ test("staff cannot open owner-only users page", async ({ page }) => {
 test("known customer receive flow exposes service selection", async ({ page }) => {
   await login(page);
   await page.goto("/receive");
-  await page.getByLabel(/khách hàng/i).fill("0916697533");
+  await page.getByLabel(/số điện thoại hoặc tên/i).fill("0916697533");
   await expect(page.getByText(/không tìm thấy khách|gợi ý khách hàng|dịch vụ/i).first()).toBeVisible();
 });
 

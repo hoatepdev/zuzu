@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { isPhoneInput, normalizePhone } from "./receive-utils";
 
-const notes = ["Giặt riêng", "Ít thơm", "Không nước xả", "Khác"];
 const isPhoneLike = (value: string) => /^[\d\s().+\-]+$/.test(value.trim());
 const isValidCustomerName = (value: string) =>
   (value.match(/[\p{L}]/gu) ?? []).length >= 2;
@@ -46,6 +45,7 @@ type ReceiveValues = {
 export function ReceivePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const lookupRef = useRef<HTMLInputElement>(null);
   const form = useForm<ReceiveValues>({
     defaultValues: { dueDate: addDays(todayVN(), 1) },
   });
@@ -56,7 +56,6 @@ export function ReceivePage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>();
   const [newCustomer, setNewCustomer] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [note, setNote] = useState("Không có");
   const [duePeriod, setDuePeriod] = useState<"" | "MORNING" | "AFTERNOON">("");
   const selectedDueDate = form.watch("dueDate");
   const services = useQuery({
@@ -79,6 +78,7 @@ export function ReceivePage() {
     if (
       unknown ||
       newCustomer ||
+      selectedCustomer ||
       !value ||
       (isPhoneLike(value) && digits.length < 3)
     ) {
@@ -93,7 +93,7 @@ export function ReceivePage() {
       350,
     );
     return () => window.clearTimeout(timer);
-  }, [customerInput, unknown, newCustomer]);
+  }, [customerInput, unknown, newCustomer, selectedCustomer]);
 
   const addingPhone = isPhoneInput(customerInput);
   const addingName = isValidCustomerName(customerInput) && !addingPhone;
@@ -130,12 +130,7 @@ export function ReceivePage() {
               : values.customerLookup
             : undefined,
           customerAddress: selectedCustomer?.address,
-          note:
-            note === "Không có"
-              ? undefined
-              : note === "Khác"
-                ? values.customNote
-                : note,
+          note: values.customNote?.trim() || undefined,
           customerUnknown: unknown,
           dueDate: values.dueDate,
           duePeriod: duePeriod || undefined,
@@ -150,13 +145,23 @@ export function ReceivePage() {
   });
 
   const chooseCustomer = (customer: Customer) => {
+    const customerLabel = `${customer.name ?? "Khách cũ"} - ${customer.phone}`;
     setSelectedCustomer(customer);
     setNewCustomer(false);
-    setCustomerInput(customer.phone);
-    form.setValue("customerLookup", customer.phone);
+    setCustomerInput(customerLabel);
+    form.setValue("customerLookup", customerLabel);
     form.setValue("customerName", customer.name);
     form.setValue("deliveryAddress", customer.address);
     setCustomerSearchQuery("");
+  };
+  const changeCustomer = () => {
+    setSelectedCustomer(undefined);
+    setCustomerInput("");
+    setCustomerSearchQuery("");
+    form.setValue("customerLookup", "");
+    form.setValue("customerName", undefined);
+    form.setValue("deliveryAddress", undefined);
+    window.setTimeout(() => lookupRef.current?.focus(), 0);
   };
   const toggleService = (serviceId: string) => {
     setSelectedServices((current) =>
@@ -165,364 +170,456 @@ export function ReceivePage() {
         : [...current, serviceId],
     );
   };
-  const dueDefault = addDays(todayVN(), 1);
-
   return (
-    <div className="has-bottom-action">
-      <PageHeader sub="SĐT → tên → dịch vụ → hẹn trả → tạo đơn">
-        Nhận đồ
-      </PageHeader>
-      {(create.error || services.error) && (
+    <div className="has-bottom-action receive-page">
+      <PageHeader>Nhận đồ</PageHeader>
+      {create.error && (
         <Banner
-          className="customer-match"
+          className="receive-submit-error"
           tone="error"
-          title={(create.error ?? services.error)?.message}
+          title={create.error.message}
         />
       )}
       <form
         className="task-form receive-form"
         onSubmit={form.handleSubmit((values) => create.mutate(values))}
       >
-        <section className="task-section customer-section">
-          <div className="step-heading">
-            <span className="step-chip" aria-hidden="true">1</span>
-            <div>
-              <strong>Khách hàng</strong>
-              <small>Nhập SĐT hoặc tên, chọn gợi ý nếu có</small>
-            </div>
-          </div>
-          <div
-            className="customer-mode"
-            role="group"
-            aria-label="Thông tin khách"
-          >
-            <Button
-              type="button"
-              variant={unknown ? "outline" : "default"}
-              aria-pressed={!unknown}
-              onClick={() => {
-                setUnknown(false);
-                setNewCustomer(false);
-              }}
-              disabled={create.isPending}
-            >
-              Có SĐT khách
-            </Button>
-            <Button
-              type="button"
-              variant={unknown ? "default" : "outline"}
-              aria-pressed={unknown}
-              onClick={() => {
-                setUnknown(true);
-                setNewCustomer(false);
-                setSelectedCustomer(undefined);
-              }}
-              disabled={create.isPending}
-            >
-              Chưa rõ khách
-            </Button>
-          </div>
-          {!unknown ? (
-            <>
-              <div className="customer-lookup">
-                <Controller
-                  control={form.control}
-                  name="customerLookup"
-                  rules={{
-                    required: "Nhập số điện thoại hoặc tên khách",
-                  }}
-                  render={({ field, fieldState }) => (
-                    <Field
-                      label="Khách hàng"
-                      htmlFor="customerLookup"
-                      error={fieldState.error?.message}
-                    >
-                      <Input
-                        id="customerLookup"
-                        className="input-lg"
-                        autoFocus
-                        autoComplete="off"
-                        placeholder="Nhập số điện thoại hoặc tên khách"
-                        disabled={newCustomer || create.isPending}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") event.preventDefault();
-                        }}
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(event) => {
-                          field.onChange(event.target.value);
-                          setCustomerInput(event.target.value);
-                          setNewCustomer(false);
-                          if (
-                            selectedCustomer &&
-                            normalizePhone(event.target.value) !==
-                              selectedCustomer.phone
-                          )
-                            setSelectedCustomer(undefined);
-                        }}
-                      />
-                    </Field>
-                  )}
-                />
+        <div className="receive-main-column">
+          <section className="receive-block customer-section">
+            <div className="step-heading">
+              <div>
+                <strong>Khách hàng</strong>
+                <small>Tìm theo số điện thoại hoặc tên khách</small>
               </div>
-
-              {customers.isFetching && (
-                <div className="lookup-state" role="status">
-                  <Spinner className="size-4" /> Đang tìm khách...
+            </div>
+            <div
+              className="customer-mode"
+              role="group"
+              aria-label="Thông tin khách"
+            >
+              <Button
+                type="button"
+                variant={unknown ? "outline" : "default"}
+                aria-pressed={!unknown}
+                onClick={() => {
+                  setUnknown(false);
+                  setNewCustomer(false);
+                }}
+                disabled={create.isPending}
+              >
+                Có thông tin khách
+              </Button>
+              <Button
+                type="button"
+                variant={unknown ? "default" : "outline"}
+                aria-pressed={unknown}
+                onClick={() => {
+                  setUnknown(true);
+                  setNewCustomer(false);
+                  setSelectedCustomer(undefined);
+                  setCustomerInput("");
+                  setCustomerSearchQuery("");
+                  form.setValue("customerLookup", "");
+                }}
+                disabled={create.isPending}
+              >
+                Chưa rõ khách
+              </Button>
+            </div>
+            {!unknown ? (
+              <>
+                <div className="customer-lookup">
+                  <Controller
+                    control={form.control}
+                    name="customerLookup"
+                    rules={{
+                      required:
+                        !unknown && !newCustomer
+                          ? "Nhập số điện thoại hoặc tên khách"
+                          : false,
+                    }}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        label="Số điện thoại hoặc tên"
+                        htmlFor="customerLookup"
+                        error={fieldState.error?.message}
+                      >
+                        <Input
+                          id="customerLookup"
+                          className="input-lg"
+                          autoFocus
+                          autoComplete="off"
+                          placeholder="Nhập SĐT hoặc tên khách"
+                          disabled={
+                            newCustomer ||
+                            !!selectedCustomer ||
+                            create.isPending
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") event.preventDefault();
+                          }}
+                          {...field}
+                          ref={(element) => {
+                            field.ref(element);
+                            lookupRef.current = element;
+                          }}
+                          value={field.value ?? ""}
+                          onChange={(event) => {
+                            field.onChange(event.target.value);
+                            setCustomerInput(event.target.value);
+                            setNewCustomer(false);
+                            if (
+                              selectedCustomer &&
+                              normalizePhone(event.target.value) !==
+                                selectedCustomer.phone
+                            ) {
+                              setSelectedCustomer(undefined);
+                            }
+                          }}
+                        />
+                      </Field>
+                    )}
+                  />
                 </div>
-              )}
-              {customerSearchQuery &&
-              customers.data?.length &&
-              !selectedCustomer ? (
-                <div
-                  className="customer-suggestions"
-                  role="listbox"
-                  aria-label="Gợi ý khách hàng"
+
+                {selectedCustomer && (
+                  <div className="customer-resolved" role="status">
+                    <div>
+                      <strong>{selectedCustomer.name ?? "Khách cũ"}</strong>
+                      <span className="mono">{selectedCustomer.phone}</span>
+                      <small>Khách đã chọn</small>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={changeCustomer}
+                      disabled={create.isPending}
+                    >
+                      Đổi khách
+                    </Button>
+                  </div>
+                )}
+                {customers.isFetching && !selectedCustomer && (
+                  <div className="lookup-state" role="status">
+                    <Spinner className="size-4" /> Đang tìm khách...
+                  </div>
+                )}
+                {customerSearchQuery &&
+                  customers.isError &&
+                  !customers.isFetching && (
+                    <div className="lookup-feedback lookup-error" role="alert">
+                      <span>Không tìm được khách lúc này.</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void customers.refetch()}
+                      >
+                        Thử lại
+                      </Button>
+                    </div>
+                  )}
+                {customerSearchQuery &&
+                  customers.isSuccess &&
+                  customers.data.length > 0 &&
+                  !selectedCustomer && (
+                    <div
+                      className="customer-suggestions"
+                      aria-label="Gợi ý khách hàng"
+                    >
+                      {customers.data.map((customer) => (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="customer-suggestion"
+                          key={customer.id}
+                          onClick={() => chooseCustomer(customer)}
+                        >
+                          <span className="customer-suggestion-copy">
+                            <strong>{customer.name ?? "Khách cũ"}</strong>
+                            <small>{customer.phone}</small>
+                          </span>
+                          <span className="customer-suggestion-action">
+                            Chọn
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                {customerSearchQuery &&
+                  customers.isSuccess &&
+                  customers.data.length === 0 &&
+                  !selectedCustomer &&
+                  (addingPhone || addingName) && (
+                    <div className="new-customer-panel" role="status">
+                      <span>Không có khách phù hợp</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setNewCustomer(true);
+                          form.setValue(
+                            "newCustomerPhone",
+                            addingPhone
+                              ? normalizePhone(customerInput)
+                              : undefined,
+                          );
+                          form.setValue(
+                            "customerName",
+                            addingPhone ? undefined : customerInput.trim(),
+                          );
+                        }}
+                      >
+                        + Thêm khách mới
+                      </Button>
+                    </div>
+                  )}
+                {newCustomer && (
+                  <div className="new-customer-fields">
+                    {addingPhone ? (
+                      <Controller
+                        control={form.control}
+                        name="customerName"
+                        rules={{
+                          required: "Nhập tên khách hàng",
+                          validate: (value) =>
+                            isValidCustomerName(value ?? "") ||
+                            "Nhập tên khách hàng hợp lệ",
+                        }}
+                        render={({ field, fieldState }) => (
+                          <Field
+                            label="Tên khách hàng"
+                            htmlFor="customerName"
+                            error={fieldState.error?.message}
+                          >
+                            <Input
+                              id="customerName"
+                              className="input-lg"
+                              placeholder="Ví dụ: Nam"
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter")
+                                  event.preventDefault();
+                              }}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </Field>
+                        )}
+                      />
+                    ) : (
+                      <Controller
+                        control={form.control}
+                        name="newCustomerPhone"
+                        rules={{
+                          required: "Nhập số điện thoại",
+                          validate: (value) =>
+                            isPhoneInput(value ?? "") ||
+                            "Số điện thoại không hợp lệ",
+                        }}
+                        render={({ field, fieldState }) => (
+                          <Field
+                            label="Số điện thoại"
+                            htmlFor="newCustomerPhone"
+                            error={fieldState.error?.message}
+                          >
+                            <Input
+                              id="newCustomerPhone"
+                              className="input-lg"
+                              inputMode="tel"
+                              placeholder="09xxxxxxxx"
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter")
+                                  event.preventDefault();
+                              }}
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </Field>
+                        )}
+                      />
+                    )}
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => {
+                        setNewCustomer(false);
+                        form.setValue("customerName", undefined);
+                        form.setValue("newCustomerPhone", undefined);
+                      }}
+                    >
+                      Nhập lại
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="unknown-banner" role="status">
+                Đang nhận cho khách chưa xác định
+              </div>
+            )}
+          </section>
+
+          <section className="receive-block service-section">
+            <div className="step-heading">
+              <div>
+                <strong>Dịch vụ dự kiến</strong>
+                <small>Đánh dấu để theo dõi</small>
+              </div>
+            </div>
+            {services.isLoading ? (
+              <div className="lookup-state" role="status">
+                <Spinner className="size-4" /> Đang tải dịch vụ...
+              </div>
+            ) : services.isError ? (
+              <div className="lookup-feedback lookup-error" role="alert">
+                <span>Không tải được danh sách dịch vụ.</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void services.refetch()}
                 >
-                  {customers.data.map((customer) => (
+                  Thử lại
+                </Button>
+              </div>
+            ) : !services.data?.length ? (
+              <p className="receive-empty">
+                Chưa có dịch vụ nào được cấu hình.
+              </p>
+            ) : (
+              <div
+                className="receive-services"
+                role="group"
+                aria-label="Dịch vụ dự kiến"
+              >
+                {services.data.map((service) => {
+                  const selected = selectedServices.includes(service.id);
+                  return (
                     <Button
                       type="button"
                       variant="ghost"
-                      className="customer-suggestion"
-                      role="option"
-                      key={customer.id}
-                      onClick={() => chooseCustomer(customer)}
+                      key={service.id}
+                      className={`receive-service ${selected ? "selected" : ""}`}
+                      aria-pressed={selected}
+                      disabled={create.isPending}
+                      onClick={() => toggleService(service.id)}
                     >
-                      <strong>
-                        {customer.name ?? "Khách cũ"} - {customer.phone}
-                      </strong>
+                      <span
+                        className="receive-service-check"
+                        aria-hidden="true"
+                      >
+                        {selected && <Check />}
+                      </span>
+                      <span className="receive-service-index">
+                        {service.stt}
+                      </span>
+                      <span className="receive-service-name">
+                        {service.name}
+                      </span>
+                      <span className="receive-service-meta">
+                        {service.isDefault && <small>Mặc định</small>}
+                      </span>
                     </Button>
-                  ))}
-                </div>
-              ) : customerSearchQuery &&
-                !customers.isFetching &&
-                !customers.data?.length &&
-                (addingPhone || addingName) ? (
-                <div className="new-customer-panel">
-                  <p>Không tìm thấy khách hàng.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setNewCustomer(true);
-                      form.setValue(
-                        "newCustomerPhone",
-                        addingPhone ? normalizePhone(customerInput) : undefined,
-                      );
-                      form.setValue(
-                        "customerName",
-                        addingPhone ? undefined : customerInput.trim(),
-                      );
-                    }}
-                  >
-                    + Thêm mới khách hàng
-                  </Button>
-                </div>
-              ) : null}
-              {newCustomer && (
-                <div className="new-customer-fields">
-                  {addingPhone ? (
-                    <Controller
-                      control={form.control}
-                      name="customerName"
-                      rules={{
-                        required: "Nhập tên khách hàng",
-                        validate: (value) =>
-                          isValidCustomerName(value ?? "") ||
-                          "Nhập tên khách hàng hợp lệ",
-                      }}
-                      render={({ field, fieldState }) => (
-                        <Field
-                          label="Tên khách hàng"
-                          htmlFor="customerName"
-                          error={fieldState.error?.message}
-                        >
-                          <Input
-                            id="customerName"
-                            className="input-lg"
-                            placeholder="Nguyễn Văn A"
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") event.preventDefault();
-                            }}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </Field>
-                      )}
-                    />
-                  ) : (
-                    <Controller
-                      control={form.control}
-                      name="newCustomerPhone"
-                      rules={{
-                        required: "Nhập số điện thoại",
-                        validate: (value) =>
-                          isPhoneInput(value ?? "") ||
-                          "Số điện thoại không hợp lệ",
-                      }}
-                      render={({ field, fieldState }) => (
-                        <Field
-                          label="Số điện thoại"
-                          htmlFor="newCustomerPhone"
-                          error={fieldState.error?.message}
-                        >
-                          <Input
-                            id="newCustomerPhone"
-                            className="input-lg"
-                            inputMode="tel"
-                            placeholder="09xxxxxxxx"
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter") event.preventDefault();
-                            }}
-                            {...field}
-                            value={field.value ?? ""}
-                          />
-                        </Field>
-                      )}
-                    />
-                  )}
-                  <Button
-                    type="button"
-                    variant="link"
-                    onClick={() => {
-                      setNewCustomer(false);
-                      form.setValue("customerName", undefined);
-                      form.setValue("newCustomerPhone", undefined);
-                    }}
-                  >
-                    Nhập lại
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="unknown-banner" role="status">
-              Đang nhận cho khách chưa xác định
-            </div>
-          )}
-        </section>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
 
-        <section className="task-section service-section">
-          <div className="step-heading">
-            <span className="step-chip" aria-hidden="true">2</span>
-            <div>
-              <strong>Dịch vụ dự kiến</strong>
-              <small>Chỉ đánh dấu để theo dõi, chưa nhập số lượng hay giá</small>
+        <div className="receive-side-column">
+          <section className="receive-block note-section">
+            <div className="step-heading">
+              <div>
+                <strong>Lưu ý</strong>
+                <small>Ghi chú để nhân viên xử lý đơn</small>
+              </div>
             </div>
-          </div>
-          {services.isLoading ? (
-            <div className="lookup-state">
-              <Spinner className="size-4" /> Đang tải dịch vụ...
-            </div>
-          ) : (
-            <div className="receive-services">
-              {(services.data ?? []).map((service) => {
-                const selected = selectedServices.includes(service.id);
-                return (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    key={service.id}
-                    className={`receive-service ${selected ? "selected" : ""}`}
-                    aria-pressed={selected}
-                    onClick={() => toggleService(service.id)}
-                  >
-                    <span>{service.name}</span>
-                    {selected && <X aria-hidden="true" />}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className="task-section schedule-section">
-          <div className="step-heading">
-            <span className="step-chip" aria-hidden="true">3</span>
-            <div>
-              <strong>Hẹn trả</strong>
-              <small>Ngày, buổi và địa chỉ giao nếu cần</small>
-            </div>
-          </div>
-          <div className="schedule-grid">
-            <Controller
-              control={form.control}
-              name="dueDate"
-              rules={{ required: "Chọn ngày hẹn trả" }}
-              render={({ field, fieldState }) => (
-                <Field
-                  label="Hẹn trả"
-                  htmlFor="dueDate"
-                  error={fieldState.error?.message}
-                >
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    className="date-input"
-                    min={todayVN()}
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </Field>
-              )}
-            />
-            <div className="date-shortcuts" aria-label="Ngày hẹn trả nhanh">
-              {[
-                { label: "Hôm nay", value: todayVN() },
-                { label: "Ngày mai", value: dueDefault },
-                { label: "+2 ngày", value: addDays(todayVN(), 2) },
-              ].map((option) => (
-                <Button
-                  key={option.label}
-                  type="button"
-                  variant={selectedDueDate === option.value ? "default" : "outline"}
-                  onClick={() => form.setValue("dueDate", option.value, { shouldValidate: true })}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-            <Field label="Buổi hẹn trả">
-              <QuickChoice
-                value={duePeriod}
-                onChange={(value) => setDuePeriod(value)}
-                options={[
-                  { label: "Sáng", value: "MORNING" },
-                  { label: "Chiều", value: "AFTERNOON" },
-                ]}
-              />
-            </Field>
-          </div>
-          <TextareaField
-            control={form.control}
-            name="deliveryAddress"
-            label="Địa chỉ giao hàng"
-            rows={3}
-            placeholder="Nhập địa chỉ nếu cần giao tận nơi"
-          />
-        </section>
-
-        <section className="task-section note-section">
-          <Field label="Lưu ý cho đơn">
-            <QuickChoice
-              options={notes.map((value) => ({ label: value, value }))}
-              value={note}
-              disabled={create.isPending}
-              onChange={(value) => setNote(value)}
-            />
-          </Field>
-          {note === "Khác" && (
             <TextareaField
               control={form.control}
               name="customNote"
-              label="Lưu ý khác"
+              label="Nội dung lưu ý"
               rows={3}
-              placeholder="Ví dụ: đồ dễ phai màu"
-              rules={{ required: "Nhập lưu ý" }}
+              placeholder="Nhập lưu ý cho đơn"
+              disabled={create.isPending}
+              rules={{
+                maxLength: { value: 500, message: "Lưu ý tối đa 500 ký tự" },
+              }}
             />
-          )}
-        </section>
+          </section>
+
+          <section className="receive-block schedule-section">
+            <div className="step-heading">
+              <div>
+                <strong>Hẹn trả</strong>
+                <small>Ngày, buổi và giao hàng</small>
+              </div>
+            </div>
+            <div className="schedule-grid">
+              <Controller
+                control={form.control}
+                name="dueDate"
+                rules={{ required: "Chọn ngày hẹn trả" }}
+                render={({ field, fieldState }) => (
+                  <Field
+                    label="Ngày hẹn"
+                    htmlFor="dueDate"
+                    error={fieldState.error?.message}
+                  >
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      className="date-input"
+                      min={todayVN()}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </Field>
+                )}
+              />
+              <div className="date-shortcuts" aria-label="Ngày hẹn trả nhanh">
+                {[
+                  { label: "Hôm nay", value: todayVN() },
+                  { label: "Ngày mai", value: addDays(todayVN(), 1) },
+                  { label: "+2 ngày", value: addDays(todayVN(), 2) },
+                ].map((option) => (
+                  <Button
+                    key={option.label}
+                    type="button"
+                    variant={
+                      selectedDueDate === option.value ? "default" : "outline"
+                    }
+                    aria-pressed={selectedDueDate === option.value}
+                    onClick={() =>
+                      form.setValue("dueDate", option.value, {
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              <Field label="Buổi hẹn trả">
+                <QuickChoice
+                  value={duePeriod}
+                  onChange={(value) => setDuePeriod(value)}
+                  ariaLabel="Buổi hẹn trả"
+                  options={[
+                    { label: "Sáng", value: "MORNING" },
+                    { label: "Chiều", value: "AFTERNOON" },
+                  ]}
+                />
+              </Field>
+            </div>
+            <TextareaField
+              control={form.control}
+              name="deliveryAddress"
+              label="Địa chỉ giao hàng"
+              rows={3}
+              placeholder="Nhập địa chỉ nếu cần giao tận nơi"
+            />
+          </section>
+        </div>
+
         <BottomActionBar>
           <Button
             type="submit"
