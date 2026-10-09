@@ -6,6 +6,18 @@ import { createTransport } from './transports.js';
 const MAX_BODY_BYTES = 8192;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const log = (fields) => console.log(JSON.stringify({ ts: new Date().toISOString(), ...fields }));
+const warnedEncodings = new Set();
+
+export function resolveEncoding(raw, { warn = console.warn } = {}) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (!value || value === 'ascii') return 'ascii';
+  if (value === 'utf8' || value === 'utf-8') return 'utf8';
+  if (!warnedEncodings.has(value)) {
+    warnedEncodings.add(value);
+    warn(`[print-agent] Unsupported PRINTER_ENCODING=${value}; using ascii`);
+  }
+  return 'ascii';
+}
 
 export function validate(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return 'Dữ liệu không hợp lệ';
@@ -41,7 +53,7 @@ function readBody(req, limit) {
 }
 
 export function createAgentServer(transport, opts = {}) {
-  const encoding = opts.encoding ?? process.env.PRINTER_ENCODING ?? 'utf8';
+  const encoding = resolveEncoding(opts.encoding ?? process.env.PRINTER_ENCODING);
   let queue = Promise.resolve();
   return createServer((req, res) => {
     const json = (statusCode, body) => {
@@ -167,7 +179,8 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv
 if (isMain) {
   try { process.loadEnvFile(); } catch {}
   const transport = createTransport();
-  transport.health().then((ok) => log({ result: 'startup', printer: ok ? 'connected' : 'disconnected' }));
+  const encoding = resolveEncoding(process.env.PRINTER_ENCODING);
+  transport.health().then((ok) => log({ result: 'startup', printer: ok ? 'connected' : 'disconnected', encoding }));
 
   if (process.env.NODE_ENV !== 'production') {
     const port = Number(process.env.PORT ?? 3210);
@@ -183,7 +196,7 @@ if (isMain) {
     void runWorker({
       transport,
       api: createApiClient({ apiUrl, token }),
-      encoding: process.env.PRINTER_ENCODING ?? 'utf8',
+      encoding,
       pollMs: Number(process.env.POLL_INTERVAL_MS ?? 2000)
     });
   }

@@ -7,10 +7,10 @@ export function maskPhone(phone) {
   return `${digits.slice(0, 3)}****${digits.slice(-3)}`;
 }
 
-// 'utf8' assumes printer firmware renders UTF-8. 'ascii' folds diacritics
+// 'utf8' assumes printer firmware renders UTF-8. Every other mode folds diacritics
 // (Nguyễn -> Nguyen) for units whose code pages mangle Vietnamese.
 export function encodeText(text, encoding) {
-  if (encoding === "ascii") {
+  if (encoding !== "utf8") {
     return text
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")

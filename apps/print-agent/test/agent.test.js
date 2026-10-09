@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAgentServer, createApiClient, runWorker } from '../src/index.js';
+import { createAgentServer, createApiClient, resolveEncoding, runWorker } from '../src/index.js';
 import { consoleTransport, createTransport, tcpTransport } from '../src/transports.js';
 
 const okTransport = { health: async () => true, write: async () => {} };
@@ -12,7 +12,7 @@ const failingTransport = {
 };
 
 async function withServer(transport, fn) {
-  const server = createAgentServer(transport);
+  const server = createAgentServer(transport, { encoding: 'ascii' });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
@@ -24,6 +24,16 @@ async function withServer(transport, fn) {
 
 const post = (base, payload) =>
   fetch(`${base}/print`, { method: 'POST', body: JSON.stringify(payload) });
+
+test('resolveEncoding defaults safely and rejects unsupported modes', () => {
+  const warnings = [];
+  assert.equal(resolveEncoding(undefined, { warn: (message) => warnings.push(message) }), 'ascii');
+  assert.equal(resolveEncoding(' UTF-8 ', { warn: (message) => warnings.push(message) }), 'utf8');
+  assert.equal(resolveEncoding('image', { warn: (message) => warnings.push(message) }), 'ascii');
+  assert.equal(resolveEncoding('image', { warn: (message) => warnings.push(message) }), 'ascii');
+  assert.equal(resolveEncoding('ASCII', { warn: (message) => warnings.push(message) }), 'ascii');
+  assert.equal(warnings.length, 1);
+});
 
 test('/health reports transport state without printing', async () => {
   await withServer(okTransport, async (base) => {

@@ -39,8 +39,8 @@ Responsive desktop mode is not enough.
 - [ ] Print Agent sees the printer.
 - [ ] One real K80 receipt prints.
 - [ ] Receipt QR scans successfully.
-- [ ] Vietnamese text is acceptable.
-- [ ] If Vietnamese output is bad, document it and set the existing safe fallback (`PRINTER_ENCODING=ascii`).
+- [ ] Vietnamese text prints without dấu by default (`PRINTER_ENCODING=ascii`).
+- [ ] Only opt into `PRINTER_ENCODING=utf8` after verifying the printer firmware renders Vietnamese correctly.
 - [ ] Phone masking is correct.
 - [ ] Cutter works.
 - [ ] Paper feed is sufficient.

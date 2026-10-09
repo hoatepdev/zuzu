@@ -45,7 +45,7 @@ PRINT_AGENT_TOKEN=<same-agent-secret-as-api>
 PRINTER_CONNECTION=usb
 PRINTER_VENDOR_ID=<device-vendor-id>
 PRINTER_PRODUCT_ID=<device-product-id>
-PRINTER_ENCODING=utf8
+PRINTER_ENCODING=ascii
 POLL_INTERVAL_MS=2000
 ```
 

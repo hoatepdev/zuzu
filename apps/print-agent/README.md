@@ -29,7 +29,7 @@ PRINT_AGENT_TOKEN=<cùng secret với API>
 PRINTER_CONNECTION=usb
 PRINTER_VENDOR_ID=0x0483
 PRINTER_PRODUCT_ID=0x5720
-PRINTER_ENCODING=utf8
+PRINTER_ENCODING=ascii
 ```
 
 Agent lấy tối đa một job mỗi lần, chờ khoảng 2 giây khi rảnh, in rồi báo success/failure. Lỗi mạng, API restart, laptop sleep/wake hoặc máy in tháo/cắm lại không làm process dừng. Một job thử tự động tối đa 3 lần; sau đó staff dùng **IN LẠI BILL** để tạo job mới.
@@ -55,7 +55,7 @@ Máy in LAN dùng `PRINTER_CONNECTION=tcp`, `PRINTER_HOST`, `PRINTER_PORT=9100`.
 
 ## Tiếng Việt
 
-Mặc định gửi UTF-8. Nếu firmware in lỗi dấu, đặt `PRINTER_ENCODING=ascii` để bỏ dấu an toàn.
+Mặc định in ASCII an toàn (bỏ dấu). Đặt `PRINTER_ENCODING=utf8` chỉ khi firmware đã kiểm tra và in đúng tiếng Việt có dấu; giá trị không hỗ trợ như `image` sẽ tự động dùng ASCII.
 
 ## Xử lý sự cố
 

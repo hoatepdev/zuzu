@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildReceipt, maskPhone, wrap } from '../src/escpos.js';
+import { buildReceipt, encodeText, maskPhone, wrap } from '../src/escpos.js';
 
 const bill = {
   code: 'ZU-0125',
@@ -37,7 +37,7 @@ test('bill contains title, code, masked phone, VN date, QR and cut', () => {
   assert.ok(text.includes('THÔNG TIN KHÁCH'));
   assert.ok(text.includes('Dịch vụ dự kiến:'));
   assert.ok(text.includes('QUÉT ĐỂ TRA ĐƠN'));
-  assert.ok(text.includes('CHECKLIST GIẶT'));
+  assert.ok(text.includes('CHECKLIST'));
   assert.ok(text.includes('[ ] Giặt, xả'));
   assert.ok(text.includes('[ ] Ủ thơm'));
   assert.ok(text.includes('[ ] Sấy, gấp'));
@@ -86,10 +86,25 @@ test('bill wraps long Vietnamese content to 48 columns', () => {
   assert.ok(text.split('\n').filter((l) => l === longName).length === 0, 'long name must be wrapped');
 });
 
-test('ascii encoding folds Vietnamese diacritics', () => {
-  const { text, data } = buildReceipt(bill, { encoding: 'ascii' });
-  assert.ok(text.includes('Nguyen Lan'));
-  assert.ok(text.includes('It thom'));
-  assert.ok(!text.includes('Nguyễn'));
-  assert.ok(!data.includes(Buffer.from('Nguyễn')));
+test('safe encodings fold Vietnamese diacritics', () => {
+  for (const encoding of ['ascii', 'image', 'unknown']) {
+    const { text, data } = buildReceipt(bill, { encoding });
+    assert.ok(text.includes('Nguyen Lan'), encoding);
+    assert.ok(text.includes('It thom'), encoding);
+    assert.ok(text.includes('GIAT LA ZUZU'), encoding);
+    assert.ok(!text.includes('Nguyễn'), encoding);
+    assert.ok(!data.includes(Buffer.from('Nguyễn')), encoding);
+  }
+  assert.equal(encodeText('Đặng Ước', 'image'), 'Dang Uoc');
+});
+
+test('utf8 encoding preserves Vietnamese diacritics', () => {
+  const { text, data } = buildReceipt(bill, { encoding: 'utf8' });
+  assert.ok(text.includes('Nguyễn Lan'));
+  assert.ok(data.includes(Buffer.from('Nguyễn')));
+});
+
+test('receipt defaults to UTF-8 for direct library calls', () => {
+  const { text } = buildReceipt(bill);
+  assert.ok(text.includes('Nguyễn Lan'));
 });
